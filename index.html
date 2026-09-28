@@ -1,0 +1,234 @@
+<!doctype html>
+<html lang="bn">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+  <title>আমার অনলাইন ডায়েরি — Voice Helper</title>
+  <style>
+    :root { font-family: system-ui, -apple-system, "Noto Sans Bengali", "Noto Sans", sans-serif; }
+    * { box-sizing: border-box; }
+    body { margin:0; min-height:100vh; display:flex; align-items:center; justify-content:center; background:linear-gradient(135deg,#f7f2ff,#eef4ff); color:#222; }
+    .card { width:min(92vw,520px); background:#fff; border-radius:24px; padding:28px 24px; box-shadow:0 18px 60px rgba(40,20,80,.18); text-align:center; }
+    .mic { width:110px; height:110px; border:0; border-radius:50%; background:linear-gradient(135deg,#6a1b9a,#8e24aa); color:#fff; font-size:46px; cursor:pointer; box-shadow:0 10px 28px rgba(106,27,154,.28); transition:.15s; }
+    .mic:hover { transform:scale(1.04); }
+    .mic:active { transform:scale(.96); }
+    .mic.recording { background:linear-gradient(135deg,#d93025,#b31412); animation:pulse 1.1s infinite; }
+    .mic.processing { background:linear-gradient(135deg,#f29900,#e37400); }
+    @keyframes pulse { 50% { box-shadow:0 0 0 14px rgba(217,48,37,.14),0 10px 28px rgba(217,48,37,.28); } }
+    h1 { font-size:25px; margin:4px 0 8px; }
+    #status { margin:14px 0 8px; font-size:17px; font-weight:600; }
+    #live { min-height:100px; margin-top:16px; padding:14px; background:#f7f7fb; border-radius:14px; text-align:left; line-height:1.75; white-space:pre-wrap; word-break:break-word; }
+    #hint { color:#666; font-size:13px; line-height:1.6; margin-top:14px; }
+    .settings { margin-top:14px; border:0; background:#eee; border-radius:10px; padding:10px 14px; cursor:pointer; font-size:14px; }
+    .small { font-size:12px; color:#777; margin-top:12px; }
+    .hidden { display:none !important; }
+  </style>
+</head>
+<body>
+  <main class="card">
+    <div style="font-size:42px">📔</div>
+    <h1>ভয়েস ডায়েরি</h1>
+    <div id="status">🎙️ Microphone Allow করে শুরু করুন</div>
+    <button id="mic" class="mic" type="button" aria-label="Microphone চালু করুন">🎙️</button>
+    <div id="live">প্রথমবার বাটনে চাপলে Chrome Microphone permission চাইবে। <b>Allow</b> চাপুন।</div>
+    <div id="hint">কথা শেষ হলে আবার বাটনে চাপুন। লেখা স্বয়ংক্রিয়ভাবে আপনার ডায়েরির পেজে পাঠানো হবে এবং সেখানে Gemini AI দিয়ে দাঁড়ি-কমা/বানান ঠিক করা হবে।</div>
+    <button id="settings" class="settings" type="button">⚙️ Chrome Microphone Settings</button>
+    <div class="small">এই পেজটি অবশ্যই HTTPS-এ host করতে হবে (যেমন GitHub Pages/Netlify)।</div>
+  </main>
+
+<script>
+(function(){
+  'use strict';
+
+  var params = new URLSearchParams(location.search);
+  var token = params.get('token') || '';
+  var parentOrigin = params.get('parentOrigin') || '';
+  var recognition = null;
+  var recording = false;
+  var manualStop = false;
+  var transcript = '';
+  var restartTimer = null;
+
+  var mic = document.getElementById('mic');
+  var status = document.getElementById('status');
+  var live = document.getElementById('live');
+  var settings = document.getElementById('settings');
+
+  function setStatus(text, mode) {
+    status.textContent = text;
+    mic.classList.remove('recording','processing');
+    if (mode === 'recording') mic.classList.add('recording');
+    if (mode === 'processing') mic.classList.add('processing');
+  }
+
+  function openMicSettings() {
+    var u = 'chrome://settings/content/microphone';
+    try { window.open(u, '_blank'); } catch(e) {}
+    live.textContent = 'Chrome Settings খুলুন → Microphone → এই Voice Helper সাইটটিকে Allow করুন → তারপর এই পেজে ফিরে এসে আবার 🎙️ চাপুন।\n\nঠিকানা: ' + u;
+  }
+  settings.addEventListener('click', openMicSettings);
+
+  function ensurePermission() {
+    if (!window.isSecureContext) {
+      return Promise.reject(new Error('INSECURE_CONTEXT'));
+    }
+    if (!navigator.mediaDevices || typeof navigator.mediaDevices.getUserMedia !== 'function') {
+      return Promise.reject(new Error('MEDIA_UNSUPPORTED'));
+    }
+    return navigator.mediaDevices.getUserMedia({audio:true}).then(function(stream){
+      try { stream.getTracks().forEach(function(t){ t.stop(); }); } catch(e) {}
+      return true;
+    });
+  }
+
+  function makeRecognition() {
+    var SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!SR) return null;
+    var r = new SR();
+    r.lang = 'bn-BD';
+    r.continuous = true;
+    r.interimResults = true;
+    r.maxAlternatives = 1;
+    return r;
+  }
+
+  function sendToDiary() {
+    var text = transcript.trim();
+    if (!text) {
+      recording = false;
+      setStatus('⚠️ কোনো কথা ধরা পড়েনি', '');
+      live.textContent = 'আবার 🎙️ চাপুন এবং স্পষ্ট করে কথা বলুন।';
+      return;
+    }
+    setStatus('📨 ডায়েরিতে পাঠানো হচ্ছে...', 'processing');
+    live.textContent = text;
+    if (!window.opener || window.opener.closed) {
+      setStatus('⚠️ ডায়েরি উইন্ডো পাওয়া যায়নি', '');
+      live.textContent = 'এই Voice Helper ডায়েরি থেকে নতুন window/tab হিসেবে খুলতে হবে।';
+      return;
+    }
+    try {
+      window.opener.postMessage({type:'DIARY_VOICE_TRANSCRIPT', token:token, text:text}, parentOrigin || '*');
+      setTimeout(function(){
+        setStatus('✅ ডায়েরিতে পাঠানো হয়েছে', '');
+        live.textContent = 'লেখাটি ডায়েরিতে যোগ হচ্ছে। এই window বন্ধ করতে পারেন।';
+        try { window.close(); } catch(e) {}
+      }, 700);
+    } catch(e) {
+      setStatus('⚠️ ডায়েরিতে পাঠানো যায়নি', '');
+      live.textContent = 'ডায়েরির মূল window খোলা আছে কি না দেখুন এবং আবার চেষ্টা করুন।';
+    }
+  }
+
+  function startRecognition() {
+    recognition = makeRecognition();
+    if (!recognition) {
+      setStatus('⚠️ Chrome/Edge Speech Recognition পাওয়া যায়নি', '');
+      live.textContent = 'সর্বশেষ Chrome বা Edge ব্যবহার করুন।';
+      recording = false;
+      return;
+    }
+    manualStop = false;
+    recognition.onstart = function(){
+      recording = true;
+      setStatus('🎙️ কথা শুনছে... বন্ধ করতে আবার চাপুন', 'recording');
+    };
+    recognition.onresult = function(event){
+      var interim = '';
+      for (var i=event.resultIndex; i<event.results.length; i++) {
+        var t = event.results[i][0] ? event.results[i][0].transcript : '';
+        if (event.results[i].isFinal) transcript += (transcript ? ' ' : '') + t;
+        else interim += t;
+      }
+      live.textContent = (transcript + (interim ? ' ' + interim : '')).trim() || 'কথা শুনছে...';
+    };
+    recognition.onerror = function(event){
+      var e = event && event.error ? event.error : 'unknown';
+      if (e === 'not-allowed' || e === 'service-not-allowed') {
+        recording = false;
+        setStatus('⚠️ Microphone Allow করা হয়নি', '');
+        live.textContent = 'নিচের Settings বাটনে চাপুন → Chrome Microphone Settings → এই সাইটের জন্য Allow করুন → ফিরে এসে আবার 🎙️ চাপুন।';
+      } else if (e === 'audio-capture') {
+        setStatus('⚠️ Microphone পাওয়া যাচ্ছে না', '');
+        live.textContent = 'Microphone সংযুক্ত/চালু আছে কি না দেখুন।';
+      } else if (e !== 'aborted' && e !== 'no-speech') {
+        setStatus('⚠️ ভয়েস ইনপুট: ' + e, '');
+      }
+    };
+    recognition.onend = function(){
+      if (!recording) return;
+      if (!manualStop) {
+        // Chrome মাঝে মাঝে silence-এর পর recognition নিজে বন্ধ করে দেয়; আবার চালু করা হবে।
+        clearTimeout(restartTimer);
+        restartTimer = setTimeout(function(){
+          if (!recording || manualStop) return;
+          try { recognition.start(); } catch(e) {}
+        }, 250);
+      } else {
+        recording = false;
+        sendToDiary();
+      }
+    };
+    try {
+      recognition.start();
+    } catch(e) {
+      recording = false;
+      setStatus('⚠️ ভয়েস শুরু করা যায়নি', '');
+      live.textContent = 'Microphone Allow করা আছে কি না দেখুন।';
+    }
+  }
+
+  function start() {
+    if (recording) {
+      stop();
+      return;
+    }
+    if (!token) {
+      live.textContent = 'এই Voice Helper ডায়েরি থেকে খুলতে হবে। সরাসরি এই URL খুলবেন না।';
+      return;
+    }
+    setStatus('🔐 Microphone permission যাচাই হচ্ছে...', 'processing');
+    ensurePermission().then(function(){
+      transcript = '';
+      live.textContent = 'Permission পাওয়া গেছে। এখন কথা বলুন...';
+      startRecognition();
+    }).catch(function(err){
+      var name = err && err.name ? err.name : '';
+      setStatus('⚠️ Microphone Allow প্রয়োজন', '');
+      if (name === 'NotAllowedError' || name === 'PermissionDeniedError') {
+        live.textContent = 'Chrome Microphone permission Block করা আছে। নিচের Settings বাটনে চাপুন এবং এই সাইটের Microphone = Allow করুন।';
+      } else if (err && err.message === 'INSECURE_CONTEXT') {
+        live.textContent = 'এই Voice Helper অবশ্যই HTTPS-এ চালাতে হবে।';
+      } else {
+        live.textContent = 'Microphone পাওয়া যায়নি। Browser settings এবং Microphone device পরীক্ষা করুন।';
+      }
+    });
+  }
+
+  function stop() {
+    manualStop = true;
+    clearTimeout(restartTimer);
+    setStatus('⏳ ভয়েস বন্ধ হচ্ছে...', 'processing');
+    if (recognition) {
+      try { recognition.stop(); return; } catch(e) {}
+    }
+    recording = false;
+    sendToDiary();
+  }
+
+  mic.addEventListener('click', start);
+
+  window.addEventListener('message', function(event){
+    var d = event && event.data;
+    if (!d || d.token !== token) return;
+    if (d.type === 'DIARY_VOICE_STOP' || d.type === 'DIARY_VOICE_CLOSE') stop();
+  });
+
+  window.addEventListener('beforeunload', function(){
+    clearTimeout(restartTimer);
+    try { if (recognition) recognition.abort(); } catch(e) {}
+  });
+})();
+</script>
+</body>
+</html>
