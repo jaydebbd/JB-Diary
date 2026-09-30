@@ -38,8 +38,8 @@
   var recognition = null;
   var isRecording = false;
   var manualStop = false;
-  var finalSpeech = '';
   var restartTimer = null;
+  var currentFinalText = '';
 
   var mic = document.getElementById('mic');
   var status = document.getElementById('status');
@@ -57,7 +57,7 @@
   }
 
   function sendToParentAndClose() {
-    var text = finalSpeech.trim();
+    var text = currentFinalText.trim();
     if (!text) {
       status.textContent = '⚠️ কোনো কথা রেকর্ড হয়নি';
       return;
@@ -67,10 +67,10 @@
     if (window.opener && !window.opener.closed) {
       window.opener.postMessage({ type: 'DIARY_VOICE_TRANSCRIPT', token: token, text: text }, parentOrigin || '*');
       setTimeout(function(){
-        window.close(); // লেখা পাঠানোর পর উইন্ডোটি নিজ থেকেই বন্ধ হয়ে যাবে
+        window.close();
       }, 500);
     } else {
-      status.textContent = '⚠️ মূল ডায়েরি উইন্ডো পাওয়া যায়নি';
+      status.textContent = '⚠️️ মূল ডায়েরি উইন্ডো পাওয়া যায়নি';
     }
   }
 
@@ -88,25 +88,28 @@
     };
 
     recognition.onresult = function(event) {
-      var interim = '';
-      for (var i = event.resultIndex; i < event.results.length; ++i) {
+      var finalAcc = '';
+      var interimAcc = '';
+
+      // প্রতিবার ইভেন্ট আসলে শুরু (০) থেকে শেষ পর্যন্ত সম্পূর্ণটা নতুনভাবে স্ক্যান করা হচ্ছে
+      for (var i = 0; i < event.results.length; ++i) {
+        var transcriptPiece = event.results[i][0].transcript;
         if (event.results[i].isFinal) {
-          var word = event.results[i][0].transcript.trim();
-          if (word) {
-            finalSpeech += (finalSpeech ? ' ' : '') + word; // নির্ভুল স্পেস সহ যোগ
-          }
+          finalAcc += transcriptPiece;
         } else {
-          interim += event.results[i][0].transcript;
+          interimAcc += transcriptPiece;
         }
       }
-      live.textContent = (finalSpeech + (interim ? ' ' + interim : '')).trim() || 'কথা শুনছে...';
+
+      currentFinalText = finalAcc;
+      var displayText = (finalAcc + (interimAcc ? ' ' + interimAcc : '')).trim();
+      live.textContent = displayText || 'কথা শুনছে...';
     };
 
     recognition.onend = function() {
-      // যদি ইউজার নিজে বন্ধ না করে, তবে ব্রাউজার নিজে কেটে দিলে সাথে সাথে আবার চালু হবে
       if (!manualStop && isRecording) {
         clearTimeout(restartTimer);
-        restartTimer = setTimeout(startListening, 150);
+        restartTimer = setTimeout(startListening, 200);
       } else {
         mic.classList.remove('recording');
         isRecording = false;
@@ -127,7 +130,8 @@
   mic.addEventListener('click', function() {
     if (!isRecording) {
       manualStop = false;
-      finalSpeech = '';
+      currentFinalText = '';
+      live.textContent = 'কথা বলুন, এখানে লেখা দেখা যাবে...';
       startListening();
     } else {
       manualStop = true;
@@ -142,9 +146,9 @@
     sendToParentAndClose();
   });
 
-  // পেজ লোড হলেই স্বয়ংক্রিয়ভাবে মাইক্রোফোন শুরু করা
   window.onload = function() {
     manualStop = false;
+    currentFinalText = '';
     startListening();
   };
 })();
