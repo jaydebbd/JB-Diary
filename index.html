@@ -46,7 +46,7 @@
   var recognition = null;
   var recording = false;
   var manualStop = false;
-  var transcript = '';
+  var finalTranscript = '';
   var restartTimer = null;
 
   var mic = document.getElementById('mic');
@@ -64,7 +64,7 @@
   function openMicSettings() {
     var u = 'chrome://settings/content/microphone';
     try { window.open(u, '_blank'); } catch(e) {}
-    live.textContent = 'Chrome Settings খুলুন → Microphone → এই Voice Helper সাইটটিকে Allow করুন → তারপর এই পেজে ফিরে এসে আবার 🎙️ চাপুন।\n\nঠিকানা: ' + u;
+    live.textContent = 'Chrome Settings খুলুন → Microphone → এই Voice Helper সাইটটিকে Allow করুন → তারপর এই পেজে ফিরে এসে আবার 🎙️ চাপুন。\n\nঠিকানা: ' + u;
   }
   settings.addEventListener('click', openMicSettings);
 
@@ -75,7 +75,7 @@
     if (!navigator.mediaDevices || typeof navigator.mediaDevices.getUserMedia !== 'function') {
       return Promise.reject(new Error('MEDIA_UNSUPPORTED'));
     }
-    return navigator.mediaDevices.getUserMedia({audio:true}).then(function(stream){
+    return navigator.mediaDevices.getUserMedia({audio: true}).then(function(stream){
       try { stream.getTracks().forEach(function(t){ t.stop(); }); } catch(e) {}
       return true;
     });
@@ -93,7 +93,7 @@
   }
 
   function sendToDiary() {
-    var text = transcript.trim();
+    var text = finalTranscript.trim();
     if (!text) {
       recording = false;
       setStatus('⚠️ কোনো কথা ধরা পড়েনি', '');
@@ -121,6 +121,10 @@
   }
 
   function startRecognition() {
+    if (recognition) {
+      try { recognition.abort(); } catch(e) {}
+    }
+
     recognition = makeRecognition();
     if (!recognition) {
       setStatus('⚠️ Chrome/Edge Speech Recognition পাওয়া যায়নি', '');
@@ -128,20 +132,29 @@
       recording = false;
       return;
     }
-    manualStop = false;
+
     recognition.onstart = function(){
       recording = true;
       setStatus('🎙️ কথা শুনছে... বন্ধ করতে আবার চাপুন', 'recording');
     };
+
     recognition.onresult = function(event){
-      var interim = '';
-      for (var i=event.resultIndex; i<event.results.length; i++) {
-        var t = event.results[i][0] ? event.results[i][0].transcript : '';
-        if (event.results[i].isFinal) transcript += (transcript ? ' ' : '') + t;
-        else interim += t;
+      var interimTranscript = '';
+      for (var i = event.resultIndex; i < event.results.length; ++i) {
+        var result = event.results[i];
+        if (result.isFinal) {
+          var chunk = result[0].transcript.trim();
+          if (chunk) {
+            finalTranscript += (finalTranscript ? ' ' : '') + chunk;
+          }
+        } else {
+          interimTranscript += result[0].transcript;
+        }
       }
-      live.textContent = (transcript + (interim ? ' ' + interim : '')).trim() || 'কথা শুনছে...';
+      var fullLiveText = finalTranscript + (interimTranscript ? ' ' + interimTranscript : '');
+      live.textContent = fullLiveText.trim() || 'কথা শুনছে...';
     };
+
     recognition.onerror = function(event){
       var e = event && event.error ? event.error : 'unknown';
       if (e === 'not-allowed' || e === 'service-not-allowed') {
@@ -155,26 +168,35 @@
         setStatus('⚠️ ভয়েস ইনপুট: ' + e, '');
       }
     };
+
     recognition.onend = function(){
       if (!recording) return;
       if (!manualStop) {
-        // Chrome মাঝে মাঝে silence-এর পর recognition নিজে বন্ধ করে দেয়; আবার চালু করা হবে।
+        // ক্রোম নিজে থেকে সংযোগ বিচ্ছিন্ন করলে যাতে কোনো টেক্সট না হারিয়ে নতুন করে লিসেনিং শুরু হয়
         clearTimeout(restartTimer);
         restartTimer = setTimeout(function(){
           if (!recording || manualStop) return;
-          try { recognition.start(); } catch(e) {}
-        }, 250);
+          try {
+            startRecognition();
+          } catch(e) {}
+        }, 150);
       } else {
         recording = false;
         sendToDiary();
       }
     };
+
     try {
       recognition.start();
     } catch(e) {
-      recording = false;
-      setStatus('⚠️ ভয়েস শুরু করা যায়নি', '');
-      live.textContent = 'Microphone Allow করা আছে কি না দেখুন।';
+      if (!manualStop && recording) {
+        clearTimeout(restartTimer);
+        restartTimer = setTimeout(startRecognition, 300);
+      } else {
+        recording = false;
+        setStatus('⚠️ ভয়েস শুরু করা যায়নি', '');
+        live.textContent = 'Microphone Allow করা আছে কি না দেখুন।';
+      }
     }
   }
 
@@ -189,7 +211,8 @@
     }
     setStatus('🔐 Microphone permission যাচাই হচ্ছে...', 'processing');
     ensurePermission().then(function(){
-      transcript = '';
+      finalTranscript = '';
+      manualStop = false;
       live.textContent = 'Permission পাওয়া গেছে। এখন কথা বলুন...';
       startRecognition();
     }).catch(function(err){
