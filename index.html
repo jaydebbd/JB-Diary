@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
-  <title>ভয়েস নোটপ্যাড — অনলাইন ডায়েরি</title>
+  <title>স্মার্ট ভয়েস ডায়েরি নোট</title>
   <style>
     :root { font-family: system-ui, -apple-system, "Noto Sans Bengali", sans-serif; }
     * { box-sizing: border-box; }
@@ -39,11 +39,12 @@
     .btn-clear { flex: 1; padding: 12px; background: #f1f3f4; color: #555; border: 0; border-radius: 10px; font-size: 14px; font-weight: 600; cursor: pointer; }
     .btn-submit { flex: 2; padding: 12px; background: #1e8e3e; color: #fff; border: 0; border-radius: 10px; font-size: 15px; font-weight: 600; cursor: pointer; box-shadow: 0 3px 10px rgba(30,142,62,.25); }
     .btn-submit:active { transform: scale(0.98); }
+    .btn-submit:disabled { background: #94d3a2; cursor: not-allowed; }
   </style>
 </head>
 <body>
   <main class="card">
-    <h1>🎙️ ভয়েস ডায়েরি নোট</h1>
+    <h1>🎙 স্মার্ট AI ভয়েস ডায়েরি</h1>
     
     <div class="mic-wrap">
       <button id="micBtn" class="mic" type="button" title="রেকর্ড চালু/বন্ধ করুন">🎙</button>
@@ -51,11 +52,11 @@
     </div>
 
     <div class="box-title">📝 লেখার বক্স (প্রয়োজনে সরাসরি এডিট করতে পারবেন):</div>
-    <textarea id="noteArea" placeholder="মাইকে চাপ দিয়ে কথা বলুন, এখানে লেখা জমা হবে... আপনি চাইলে কিবোর্ড দিয়েও এখানে টাইপ বা সংশোধন করতে পারেন।"></textarea>
+    <textarea id="noteArea" placeholder="মাইক চেপে কথা বলুন, থামানোর পর স্বয়ংক্রিয়ভাবে নির্ভুল বানান ও দাঁড়ি-কমা সহ লেখা চলে আসবে..."></textarea>
 
     <div class="action-btns">
       <button id="clearBtn" class="btn-clear" type="button">মুছে ফেলুন</button>
-      <button id="submitBtn" class="btn-submit" type="button">✅ ডায়েরিতে পাঠান ও ঠিক করুন</button>
+      <button id="submitBtn" class="btn-submit" type="button">✅ ডায়েরিতে পাঠান</button>
     </div>
   </main>
 
@@ -63,13 +64,12 @@
 (function(){
   'use strict';
 
+  // আপনার Groq API Key এখানে বসান
+  var GROQ_API_KEY = "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";
+
   var params = new URLSearchParams(location.search);
   var token = params.get('token') || '';
   var parentOrigin = params.get('parentOrigin') || '*';
-
-  var SR = window.SpeechRecognition || window.webkitSpeechRecognition;
-  var recognition = null;
-  var isRecording = false;
 
   var micBtn = document.getElementById('micBtn');
   var status = document.getElementById('status');
@@ -77,105 +77,108 @@
   var clearBtn = document.getElementById('clearBtn');
   var submitBtn = document.getElementById('submitBtn');
 
-  var textBeforeSpeech = '';
+  var mediaRecorder = null;
+  var audioChunks = [];
+  var isRecording = false;
 
-  function startRecognition() {
-    if (!SR) {
-      status.textContent = '⚠️ আপনার ব্রাউজারে Speech Recognition সাপোর্ট নেই';
-      return;
-    }
+  async function startRecording() {
+    try {
+      var stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      audioChunks = [];
+      mediaRecorder = new MediaRecorder(stream);
 
-    recognition = new SR();
-    recognition.lang = 'bn-BD';
-    recognition.continuous = true;
-    recognition.interimResults = true;
+      mediaRecorder.ondataavailable = function(e) {
+        if (e.data.size > 0) {
+          audioChunks.push(e.data);
+        }
+      };
 
-    // মাইক অন করার মুহূর্তে বক্সে আগে থেকে যা ছিল তা আলাদা সংরক্ষণ
-    textBeforeSpeech = noteArea.value.trim();
-    if (textBeforeSpeech) {
-      textBeforeSpeech += ' ';
-    }
+      mediaRecorder.onstop = async function() {
+        // মাইক্রোফোন ট্র্যাক বন্ধ করা
+        stream.getTracks().forEach(track => track.stop());
+        
+        var audioBlob = new Blob(audioChunks, { type: 'audio/m4a' });
+        await transcribeAudio(audioBlob);
+      };
 
-    recognition.onstart = function() {
+      mediaRecorder.start();
       isRecording = true;
       micBtn.classList.add('recording');
       micBtn.innerHTML = '🛑';
-      status.textContent = '🔴 কথা শুনছে... শেষ করতে আবার চাপুন';
-    };
-
-    recognition.onresult = function(event) {
-      var finalTranscript = '';
-      var interimTranscript = '';
-
-      // প্রতিবার ০ (শূন্য) থেকে শুরু করে পুরো ফলাফল সঠিকভাবে নতুন করে তৈরি করা হচ্ছে
-      // এতে মোবাইল ব্রাউজারে বারবার কথা ডুপ্লিকেট হবে না
-      for (var i = 0; i < event.results.length; ++i) {
-        var chunk = event.results[i][0].transcript;
-        if (event.results[i].isFinal) {
-          finalTranscript += chunk + ' ';
-        } else {
-          interimTranscript += chunk;
-        }
-      }
-
-      var currentSpeech = (finalTranscript + interimTranscript).trim();
-      noteArea.value = textBeforeSpeech + currentSpeech;
-      noteArea.scrollTop = noteArea.scrollHeight;
-    };
-
-    recognition.onerror = function(event) {
-      if (event.error !== 'no-speech') {
-        status.textContent = 'ভয়েস ত্রুটি: ' + event.error;
-      }
-    };
-
-    recognition.onend = function() {
-      isRecording = false;
-      micBtn.classList.remove('recording');
-      micBtn.innerHTML = '🎙️';
-      status.textContent = 'থামানো হয়েছে (আবার কথা বলতে মাইক চাপুন)';
-    };
-
-    try {
-      recognition.start();
-    } catch(e) {
-      isRecording = false;
+      status.textContent = '🔴 কথা শুনছি... শেষ করতে আবার চাপুন';
+    } catch(err) {
+      status.textContent = '⚠️ মাইক্রোফোন অ্যাক্সেস পাওয়া যায়নি';
     }
   }
 
-  function stopRecognition() {
-    if (recognition) {
-      recognition.stop();
+  function stopRecording() {
+    if (mediaRecorder && isRecording) {
+      mediaRecorder.stop();
+      isRecording = false;
+      micBtn.classList.remove('recording');
+      micBtn.innerHTML = '🎙️';
+      status.textContent = '⏳ লেখা তৈরি হচ্ছে...';
     }
-    isRecording = false;
+  }
+
+
+
+
+  // AI-এর মাধ্যমে অডিও থেকে বাংলায় নির্ভুল টেক্সট আনা
+  async function transcribeAudio(audioBlob) {
+    if (GROQ_API_KEY === "YOUR_GROQ_API_KEY_HERE") {
+      alert("অনুগ্রহ করে কোডে আপনার Groq API Key টি বসান!");
+      status.textContent = "API Key প্রয়োজন";
+      return;
+    }
+
+    var formData = new FormData();
+    formData.append("file", audioBlob, "audio.m4a");
+    formData.append("model", "whisper-large-v3");
+    formData.append("language", "bn");
+    formData.append("response_format", "json");
+
+    try {
+      var response = await fetch("https://api.groq.com/openai/v1/audio/transcriptions", {
+        method: "POST",
+        headers: {
+          "Authorization": "Bearer " + GROQ_API_KEY
+        },
+        body: formData
+      });
+
+      var data = await response.json();
+      if (data.text) {
+        var newText = data.text.trim();
+        var prevText = noteArea.value.trim();
+        noteArea.value = prevText ? (prevText + " " + newText) : newText;
+        status.textContent = '✅ সফলভাবে লেখা সম্পন্ন হয়েছে!';
+      } else {
+        status.textContent = '⚠️ কথা স্পষ্ট বোঝা যায়নি, আবার চেষ্টা করুন';
+      }
+    } catch(err) {
+      status.textContent = '⚠️ টেক্সট কনভার্ট করতে সমস্যা হয়েছে';
+    }
   }
 
   micBtn.addEventListener('click', function() {
     if (!isRecording) {
-      startRecognition();
+      startRecording();
     } else {
-      stopRecognition();
+      stopRecording();
     }
   });
 
   clearBtn.addEventListener('click', function() {
     if (confirm('আপনি কি বক্সের সব লেখা মুছে ফেলতে চান?')) {
-      if (isRecording && recognition) recognition.abort();
-      isRecording = false;
-      micBtn.classList.remove('recording');
-      micBtn.innerHTML = '🎙️';
+      if (isRecording) stopRecording();
       noteArea.value = '';
-      textBeforeSpeech = '';
       status.textContent = 'কথা বলতে মাইক চাপুন';
     }
   });
 
-  // দ্রুত ও এক ক্লিকেই ডায়ালগ বন্ধ করে ডাটা পাঠানো
   submitBtn.addEventListener('click', function() {
-    if (isRecording && recognition) {
-      recognition.abort();
-      isRecording = false;
-    }
+    if (isRecording) stopRecording();
 
     var textToSend = noteArea.value.trim();
     if (!textToSend) {
@@ -190,11 +193,9 @@
         text: textToSend
       }, parentOrigin);
 
-      // কোনো বিলম্ব ছাড়াই তৎক্ষণাৎ বন্ধ হবে
       window.close();
     } else {
       alert('মূল ডায়েরি উইন্ডো পাওয়া যায়নি। অনুগ্রহ করে ডায়েরির পেজ থেকে এটি খুলুন।');
-      status.textContent = '⚠️ পাঠানো ব্যর্থ হয়েছে';
     }
   });
 
@@ -202,3 +203,6 @@
 </script>
 </body>
 </html>
+
+
+
