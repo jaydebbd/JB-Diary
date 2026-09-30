@@ -43,7 +43,7 @@
 </head>
 <body>
   <main class="card">
-    <h1>🎙️️ ভয়েস ডায়েরি নোট</h1>
+    <h1>🎙️ ভয়েস ডায়েরি নোট</h1>
     
     <div class="mic-wrap">
       <button id="micBtn" class="mic" type="button" title="রেকর্ড চালু/বন্ধ করুন">🎙</button>
@@ -77,8 +77,7 @@
   var clearBtn = document.getElementById('clearBtn');
   var submitBtn = document.getElementById('submitBtn');
 
-  var baseText = '';
-  var sessionFinals = '';
+  var textBeforeSpeech = '';
 
   function startRecognition() {
     if (!SR) {
@@ -91,11 +90,11 @@
     recognition.continuous = true;
     recognition.interimResults = true;
 
-    baseText = noteArea.value;
-    if (baseText && !baseText.endsWith(' ')) {
-      baseText += ' ';
+    // মাইক অন করার মুহূর্তে বক্সে আগে থেকে যা ছিল তা আলাদা সংরক্ষণ
+    textBeforeSpeech = noteArea.value.trim();
+    if (textBeforeSpeech) {
+      textBeforeSpeech += ' ';
     }
-    sessionFinals = '';
 
     recognition.onstart = function() {
       isRecording = true;
@@ -105,18 +104,22 @@
     };
 
     recognition.onresult = function(event) {
-      var interim = '';
+      var finalTranscript = '';
+      var interimTranscript = '';
 
-      for (var i = event.resultIndex; i < event.results.length; ++i) {
-        var transcript = event.results[i][0].transcript;
+      // প্রতিবার ০ (শূন্য) থেকে শুরু করে পুরো ফলাফল সঠিকভাবে নতুন করে তৈরি করা হচ্ছে
+      // এতে মোবাইল ব্রাউজারে বারবার কথা ডুপ্লিকেট হবে না
+      for (var i = 0; i < event.results.length; ++i) {
+        var chunk = event.results[i][0].transcript;
         if (event.results[i].isFinal) {
-          sessionFinals += transcript + ' ';
+          finalTranscript += chunk + ' ';
         } else {
-          interim += transcript;
+          interimTranscript += chunk;
         }
       }
 
-      noteArea.value = baseText + sessionFinals + interim;
+      var currentSpeech = (finalTranscript + interimTranscript).trim();
+      noteArea.value = textBeforeSpeech + currentSpeech;
       noteArea.scrollTop = noteArea.scrollHeight;
     };
 
@@ -157,19 +160,20 @@
 
   clearBtn.addEventListener('click', function() {
     if (confirm('আপনি কি বক্সের সব লেখা মুছে ফেলতে চান?')) {
-      if (isRecording) stopRecognition();
+      if (isRecording && recognition) recognition.abort();
+      isRecording = false;
+      micBtn.classList.remove('recording');
+      micBtn.innerHTML = '🎙️';
       noteArea.value = '';
-      baseText = '';
-      sessionFinals = '';
+      textBeforeSpeech = '';
       status.textContent = 'কথা বলতে মাইক চাপুন';
     }
   });
 
-  // দ্রুত ও সরাসরি মূল ডায়েরিতে পাঠানোর অংশ
+  // দ্রুত ও এক ক্লিকেই ডায়ালগ বন্ধ করে ডাটা পাঠানো
   submitBtn.addEventListener('click', function() {
-    // মাইক চালু থাকলে ব্যাকগ্রাউন্ড বন্ধ না হওয়া পর্যন্ত অপেক্ষা না করে দ্রুত বন্ধ করা
     if (isRecording && recognition) {
-      recognition.abort(); // stop() এর চেয়ে abort() তাৎক্ষণিক কানেকশন কাটে
+      recognition.abort();
       isRecording = false;
     }
 
@@ -180,14 +184,13 @@
     }
 
     if (window.opener && !window.opener.closed) {
-      // কোনো ডিলে ছাড়া সরাসরি মূল ফাইলে মেসেজ পাঠানো
       window.opener.postMessage({
         type: 'DIARY_VOICE_TRANSCRIPT',
         token: token,
         text: textToSend
       }, parentOrigin);
 
-      // কোনো অপেক্ষা (setTimeout) ছাড়া সঙ্গে সঙ্গে উইন্ডো বন্ধ হবে
+      // কোনো বিলম্ব ছাড়াই তৎক্ষণাৎ বন্ধ হবে
       window.close();
     } else {
       alert('মূল ডায়েরি উইন্ডো পাওয়া যায়নি। অনুগ্রহ করে ডায়েরির পেজ থেকে এটি খুলুন।');
