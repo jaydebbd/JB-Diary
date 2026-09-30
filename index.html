@@ -1,231 +1,677 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="bn">
 <head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="theme-color" content="#1a73e8">
   <title>স্মার্ট AI ভয়েস ডায়েরি</title>
   <style>
-    :root { font-family: system-ui, -apple-system, "Noto Sans Bengali", sans-serif; }
     * { box-sizing: border-box; }
-    body { margin: 0; min-height: 100vh; display: flex; align-items: center; justify-content: center; background: #f0f4f9; color: #222; padding: 12px; }
-    .card { width: min(100%, 540px); background: #fff; border-radius: 20px; padding: 20px; box-shadow: 0 10px 35px rgba(0,0,0,.08); text-align: center; }
-    h1 { font-size: 20px; margin: 4px 0 12px; color: #1a73e8; }
-    
-    .mic-wrap { display: flex; flex-direction: column; align-items: center; gap: 8px; margin-bottom: 14px; }
-    .mic { width: 78px; height: 78px; border: 0; border-radius: 50%; background: linear-gradient(135deg,#6a1b9a,#8e24aa); color: #fff; font-size: 34px; cursor: pointer; box-shadow: 0 6px 18px rgba(106,27,154,.28); transition: .2s; }
-    .mic.recording { background: linear-gradient(135deg,#d93025,#b31412); animation: pulse 1.2s infinite; }
-    @keyframes pulse { 50% { box-shadow: 0 0 0 14px rgba(217,48,37,.16); } }
-    
-    #status { font-size: 14px; font-weight: 600; color: #555; }
-    
-    .box-title { text-align: left; font-size: 13px; font-weight: 600; color: #666; margin-top: 10px; margin-bottom: 5px; }
-    #noteArea {
-      width: 100%;
-      height: 180px;
-      padding: 12px;
-      font-size: 15.5px;
-      line-height: 1.6;
-      border: 1.5px solid #c2d7fa;
-      border-radius: 12px;
-      background: #fbfcfe;
-      outline: none;
-      resize: vertical;
-      color: #2c3e50;
-      font-family: inherit;
+    body {
+      margin: 0;
+      padding: 18px;
+      font-family: Arial, "Noto Sans Bengali", sans-serif;
+      background: #f5f7fb;
+      color: #202124;
     }
-    #noteArea:focus { border-color: #1a73e8; background: #fff; box-shadow: 0 0 0 2px rgba(26,115,232,0.15); }
-    
-    .action-btns { display: flex; gap: 10px; margin-top: 14px; }
-    .btn-clear { flex: 1; padding: 12px; background: #f1f3f4; color: #555; border: 0; border-radius: 10px; font-size: 14px; font-weight: 600; cursor: pointer; }
-    .btn-submit { flex: 2; padding: 12px; background: #1e8e3e; color: #fff; border: 0; border-radius: 10px; font-size: 15px; font-weight: 600; cursor: pointer; box-shadow: 0 3px 10px rgba(30,142,62,.25); }
-    .btn-submit:active { transform: scale(0.98); }
-    .btn-submit:disabled { background: #94d3a2; cursor: not-allowed; }
+    .container {
+      max-width: 620px;
+      margin: 0 auto;
+      background: #fff;
+      border-radius: 18px;
+      padding: 20px;
+      box-shadow: 0 4px 22px rgba(0,0,0,.10);
+    }
+    h1 {
+      margin: 0 0 8px;
+      text-align: center;
+      font-size: 24px;
+      color: #1a73e8;
+    }
+    .subtitle {
+      text-align: center;
+      color: #5f6368;
+      font-size: 14px;
+      margin-bottom: 18px;
+      line-height: 1.6;
+    }
+    .api-box {
+      background: #f8f9fa;
+      border: 1px solid #dadce0;
+      border-radius: 12px;
+      padding: 12px;
+      margin-bottom: 16px;
+    }
+    .api-box label {
+      display: block;
+      font-weight: 600;
+      font-size: 14px;
+      margin-bottom: 7px;
+    }
+    .api-row {
+      display: flex;
+      gap: 8px;
+    }
+    #apiKey {
+      flex: 1;
+      min-width: 0;
+      padding: 11px 12px;
+      border: 1px solid #dadce0;
+      border-radius: 9px;
+      font-size: 14px;
+      outline: none;
+    }
+    #apiKey:focus { border-color: #1a73e8; }
+    .save-key {
+      border: 0;
+      border-radius: 9px;
+      padding: 0 14px;
+      background: #1a73e8;
+      color: #fff;
+      cursor: pointer;
+      font-weight: 600;
+    }
+    .key-note {
+      margin-top: 7px;
+      font-size: 12px;
+      color: #5f6368;
+      line-height: 1.5;
+    }
+    .mic-wrap {
+      display: flex;
+      justify-content: center;
+      margin: 20px 0 14px;
+    }
+    #micButton {
+      width: 104px;
+      height: 104px;
+      border: 0;
+      border-radius: 50%;
+      background: #1a73e8;
+      color: #fff;
+      font-size: 44px;
+      cursor: pointer;
+      box-shadow: 0 7px 20px rgba(26,115,232,.30);
+      transition: transform .15s, background .15s;
+    }
+    #micButton:active { transform: scale(.96); }
+    #micButton.recording {
+      background: #d93025;
+      animation: pulse 1.3s infinite;
+    }
+    @keyframes pulse {
+      0% { box-shadow: 0 0 0 0 rgba(217,48,37,.35); }
+      70% { box-shadow: 0 0 0 18px rgba(217,48,37,0); }
+      100% { box-shadow: 0 0 0 0 rgba(217,48,37,0); }
+    }
+    #status {
+      text-align: center;
+      min-height: 24px;
+      font-size: 14px;
+      font-weight: 600;
+      color: #5f6368;
+      margin-bottom: 12px;
+    }
+    textarea {
+      width: 100%;
+      min-height: 190px;
+      resize: vertical;
+      padding: 13px;
+      border: 1px solid #dadce0;
+      border-radius: 12px;
+      font-size: 17px;
+      line-height: 1.7;
+      font-family: Arial, "Noto Sans Bengali", sans-serif;
+      outline: none;
+    }
+    textarea:focus { border-color: #1a73e8; }
+    .buttons {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      margin-top: 12px;
+    }
+    button.action {
+      border: 0;
+      border-radius: 10px;
+      padding: 12px;
+      font-size: 15px;
+      font-weight: 600;
+      cursor: pointer;
+    }
+    #clearButton { background: #f1f3f4; color: #202124; }
+    #submitButton { background: #188038; color: #fff; }
+    button:disabled {
+      opacity: .55;
+      cursor: not-allowed;
+    }
+    .info {
+      margin-top: 16px;
+      padding: 11px 13px;
+      border-radius: 10px;
+      background: #eef3fc;
+      color: #3c4043;
+      font-size: 12px;
+      line-height: 1.65;
+    }
   </style>
 </head>
 <body>
-  <main class="card">
-    <h1>🎙 স্মার্ট AI ভয়েস ডায়েরি</h1>
-    
+  <div class="container">
+    <h1>🎙️ স্মার্ট AI ভয়েস ডায়েরি</h1>
+    <div class="subtitle">
+      কথা বলুন → Gemini অডিও শুনবে → পরিষ্কার বাংলা লেখা তৈরি হবে
+    </div>
+
+    <div class="api-box">
+      <label for="apiKey">Gemini API Key</label>
+      <div class="api-row">
+        <input id="apiKey" type="password" autocomplete="off"
+               placeholder="AIzaSy... অথবা আপনার বৈধ Gemini API Key">
+        <button class="save-key" id="saveKeyButton" type="button">সংরক্ষণ</button>
+      </div>
+      <div class="key-note">
+        Key শুধু এই ব্রাউজারের localStorage-এ রাখা হবে। GitHub Pages-এ public code-এর
+        মধ্যে API key লিখবেন না।
+      </div>
+    </div>
+
     <div class="mic-wrap">
-      <button id="micBtn" class="mic" type="button" title="রেকর্ড চালু/বন্ধ করুন">🎙</button>
-      <div id="status">কথা বলতে মাইক চাপুন</div>
+      <button id="micButton" type="button" aria-label="রেকর্ড শুরু/বন্ধ করুন">🎙️</button>
     </div>
 
-    <div class="box-title">📝 লেখার বক্স (প্রয়োজনে সরাসরি এডিট করতে পারবেন):</div>
-    <textarea id="noteArea" placeholder="মাইক চেপে কথা বলুন, থামানোর পর স্বয়ংক্রিয়ভাবে নির্ভুল বানান ও দাঁড়ি-কমা সহ লেখা চলে আসবে..."></textarea>
+    <div id="status">মাইক্রোফোন চালু করতে 🎙️ চাপুন</div>
 
-    <div class="action-btns">
-      <button id="clearBtn" class="btn-clear" type="button">মুছে ফেলুন</button>
-      <button id="submitBtn" class="btn-submit" type="button">✅ ডায়েরিতে পাঠান</button>
+    <textarea id="textOutput"
+      placeholder="আপনার বলা কথার পরিষ্কার বাংলা লেখা এখানে আসবে..."></textarea>
+
+    <div class="buttons">
+      <button class="action" id="clearButton" type="button">🗑️ পরিষ্কার</button>
+      <button class="action" id="submitButton" type="button">📔 ডায়েরিতে পাঠান</button>
     </div>
-  </main>
+
+    <div class="info">
+      রেকর্ডিং শেষ হলে অডিও Gemini 2.5 Flash-এ পাঠানো হবে। Gemini-কে বলা হয়েছে
+      আপনার কথার অর্থ পরিবর্তন না করে বাংলা ভাষায় লিখতে এবং প্রয়োজনীয় বানান ও
+      যতিচিহ্ন ঠিক করতে।
+    </div>
+  </div>
 
 <script>
-(function(){
+(function () {
   'use strict';
 
-  // আপনার Groq API Key এখানে বসান
-  var GROQ_API_KEY = "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";
+  var MODEL = 'gemini-2.5-flash';
+  var GEMINI_ENDPOINT =
+    'https://generativelanguage.googleapis.com/v1beta/models/' +
+    MODEL + ':generateContent';
 
-  var params = new URLSearchParams(location.search);
+  var params = new URLSearchParams(window.location.search);
   var token = params.get('token') || '';
-  var parentOrigin = params.get('parentOrigin') || '*';
+  var parentOrigin = params.get('parentOrigin') || '';
 
-  var micBtn = document.getElementById('micBtn');
-  var status = document.getElementById('status');
-  var noteArea = document.getElementById('noteArea');
-  var clearBtn = document.getElementById('clearBtn');
-  var submitBtn = document.getElementById('submitBtn');
+  var micButton = document.getElementById('micButton');
+  var statusEl = document.getElementById('status');
+  var textOutput = document.getElementById('textOutput');
+  var clearButton = document.getElementById('clearButton');
+  var submitButton = document.getElementById('submitButton');
+  var apiKeyInput = document.getElementById('apiKey');
+  var saveKeyButton = document.getElementById('saveKeyButton');
 
   var mediaRecorder = null;
+  var mediaStream = null;
   var audioChunks = [];
+  var selectedMimeType = '';
   var isRecording = false;
-  var streamObj = null;
+  var isProcessing = false;
 
-  async function startRecording() {
+  function setStatus(message) {
+    statusEl.textContent = message;
+  }
+
+  function getSavedApiKey() {
     try {
-      streamObj = await navigator.mediaDevices.getUserMedia({ audio: true });
-      audioChunks = [];
+      return (localStorage.getItem('diary_gemini_api_key') || '').trim();
+    } catch (e) {
+      return '';
+    }
+  }
 
-      // অ্যান্ড্রয়েড ক্রোমের জন্য সেরা সমর্থিত অডিও ফরম্যাট বাছাই
-      var mimeType = 'audio/webm';
-      if (!MediaRecorder.isTypeSupported('audio/webm')) {
-        if (MediaRecorder.isTypeSupported('audio/mp4')) {
-          mimeType = 'audio/mp4';
-        } else {
-          mimeType = '';
+  function saveApiKey() {
+    var key = String(apiKeyInput.value || '').trim();
+    if (!key) {
+      setStatus('⚠️ আগে Gemini API Key দিন।');
+      return;
+    }
+    try {
+      localStorage.setItem('diary_gemini_api_key', key);
+      setStatus('✅ Gemini API Key সংরক্ষিত হয়েছে।');
+    } catch (e) {
+      setStatus('⚠️ API Key সংরক্ষণ করা যায়নি।');
+    }
+  }
+
+  function chooseMimeType() {
+    var types = [
+      'audio/webm;codecs=opus',
+      'audio/webm',
+      'audio/mp4',
+      'audio/ogg;codecs=opus'
+    ];
+
+    for (var i = 0; i < types.length; i++) {
+      try {
+        if (window.MediaRecorder &&
+            MediaRecorder.isTypeSupported &&
+            MediaRecorder.isTypeSupported(types[i])) {
+          return types[i];
+        }
+      } catch (e) {}
+    }
+    return '';
+  }
+
+  function getExtension(mimeType) {
+    if (mimeType.indexOf('mp4') !== -1) return 'm4a';
+    if (mimeType.indexOf('ogg') !== -1) return 'ogg';
+    return 'webm';
+  }
+
+  function blobToBase64(blob) {
+    return new Promise(function (resolve, reject) {
+      var reader = new FileReader();
+      reader.onloadend = function () {
+        try {
+          var result = String(reader.result || '');
+          var comma = result.indexOf(',');
+          if (comma === -1) {
+            reject(new Error('Audio base64 তৈরি করা যায়নি।'));
+            return;
+          }
+          resolve(result.substring(comma + 1));
+        } catch (e) {
+          reject(e);
+        }
+      };
+      reader.onerror = function () {
+        reject(new Error('Audio পড়তে সমস্যা হয়েছে।'));
+      };
+      reader.readAsDataURL(blob);
+    });
+  }
+
+  async function transcribeWithGemini(audioBlob, mimeType) {
+    var apiKey = getSavedApiKey();
+
+    if (!apiKey) {
+      throw new Error('Gemini API Key পাওয়া যায়নি।');
+    }
+
+    if (!audioBlob || !audioBlob.size) {
+      throw new Error('কোনো অডিও পাওয়া যায়নি।');
+    }
+
+    /*
+     * Gemini inline audio request-এর মোট আকার 20 MB-এর মধ্যে রাখা উচিত।
+     * সাধারণ ছোট voice recording-এর জন্য inlineData ব্যবহার করা হচ্ছে।
+     */
+    if (audioBlob.size > 14 * 1024 * 1024) {
+      throw new Error(
+        'রেকর্ডিংটি অনেক বড় হয়েছে। অনুগ্রহ করে ছোট ছোট অংশে রেকর্ড করুন।'
+      );
+    }
+
+    var base64Audio = await blobToBase64(audioBlob);
+
+    var prompt =
+      'এই অডিওতে একজন ব্যক্তি বাংলা ভাষায় কথা বলেছেন। ' +
+      'অডিওটি মনোযোগ দিয়ে শুনে তিনি যা বলেছেন তা বাংলায় লিখে দিন।\\n\\n' +
+      'কঠোর নিয়ম:\\n' +
+      '১. বক্তা যা বলেছেন তার অর্থ পরিবর্তন করবেন না।\\n' +
+      '২. নিজের পক্ষ থেকে কোনো নতুন তথ্য, শব্দ, বাক্য বা ব্যাখ্যা যোগ করবেন না।\\n' +
+      '৩. ভুল শোনা শব্দ অনুমান করে বানিয়ে লিখবেন না। অডিওতে যা শোনা যায় সেটিই লিখবেন।\\n' +
+      '৪. বাংলা বানান যথাসম্ভব শুদ্ধ করুন।\\n' +
+      '৫. প্রয়োজন অনুযায়ী দাঁড়ি, কমা, প্রশ্নবোধক চিহ্ন ও অন্যান্য যতিচিহ্ন দিন।\\n' +
+      '৬. বক্তা ইংরেজি শব্দ বললে প্রয়োজন অনুযায়ী সেই শব্দটি রাখতে পারেন; ' +
+      'নিজে থেকে ইংরেজি যোগ করবেন না।\\n' +
+      '৭. কোনো ভূমিকা, ব্যাখ্যা, মন্তব্য, শিরোনাম বা অতিরিক্ত কথা লিখবেন না।\\n' +
+      '৮. শুধু চূড়ান্ত বাংলা transcript দিন।';
+
+    var payload = {
+      contents: [{
+        role: 'user',
+        parts: [
+          { text: prompt },
+          {
+            inlineData: {
+              mimeType: mimeType,
+              data: base64Audio
+            }
+          }
+        ]
+      }],
+      generationConfig: {
+        temperature: 0.1
+      }
+    };
+
+    var response = await fetch(GEMINI_ENDPOINT, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-goog-api-key': apiKey
+      },
+      body: JSON.stringify(payload)
+    });
+
+    var raw = await response.text();
+    var json;
+
+    try {
+      json = JSON.parse(raw);
+    } catch (e) {
+      throw new Error('Gemini থেকে সঠিক JSON response পাওয়া যায়নি।');
+    }
+
+    if (!response.ok) {
+      var apiMessage = '';
+      try {
+        apiMessage = json.error && json.error.message
+          ? String(json.error.message)
+          : '';
+      } catch (e) {}
+
+      if (response.status === 400) {
+        throw new Error(
+          apiMessage || 'Gemini request গ্রহণ করেনি। API Key বা audio format পরীক্ষা করুন।'
+        );
+      }
+
+      if (response.status === 401 || response.status === 403) {
+        throw new Error(
+          apiMessage || 'Gemini API Key বৈধ নয় বা API ব্যবহারের অনুমতি নেই।'
+        );
+      }
+
+      if (response.status === 429) {
+        throw new Error(
+          apiMessage || 'Gemini Free Tier-এর সাময়িক rate limit পূরণ হয়েছে। কিছুক্ষণ পরে আবার চেষ্টা করুন।'
+        );
+      }
+
+      throw new Error(apiMessage || ('Gemini API error: HTTP ' + response.status));
+    }
+
+    var resultText = '';
+
+    try {
+      var candidates = json.candidates || [];
+      for (var i = 0; i < candidates.length; i++) {
+        var parts = candidates[i].content &&
+                    candidates[i].content.parts
+                    ? candidates[i].content.parts
+                    : [];
+
+        for (var j = 0; j < parts.length; j++) {
+          if (parts[j].text) {
+            resultText += String(parts[j].text);
+          }
+        }
+
+        if (resultText.trim()) break;
+      }
+    } catch (e) {}
+
+    resultText = resultText
+      .replace(/^\s*```(?:text|plaintext|markdown)?\s*/i, '')
+      .replace(/\s*```\s*$/i, '')
+      .trim();
+
+    if (!resultText) {
+      throw new Error('Gemini কোনো transcript ফেরত দেয়নি।');
+    }
+
+    return resultText;
+  }
+
+  function stopTracks() {
+    if (mediaStream) {
+      try {
+        mediaStream.getTracks().forEach(function (track) {
+          try { track.stop(); } catch (e) {}
+        });
+      } catch (e) {}
+    }
+    mediaStream = null;
+  }
+
+  function startRecording() {
+    if (isProcessing) return;
+
+    var apiKey = getSavedApiKey();
+    if (!apiKey) {
+      apiKeyInput.focus();
+      setStatus('🔑 আগে Gemini API Key দিন এবং সংরক্ষণ করুন।');
+      return;
+    }
+
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+      setStatus('❌ এই browser-এ microphone recording সমর্থিত নয়।');
+      return;
+    }
+
+    if (!window.MediaRecorder) {
+      setStatus('❌ এই browser-এ MediaRecorder সমর্থিত নয়।');
+      return;
+    }
+
+    audioChunks = [];
+    selectedMimeType = chooseMimeType();
+
+    var audioOptions = {};
+    if (selectedMimeType) {
+      audioOptions.mimeType = selectedMimeType;
+      audioOptions.audioBitsPerSecond = 128000;
+    }
+
+    navigator.mediaDevices.getUserMedia({
+      audio: {
+        channelCount: 1,
+        echoCancellation: true,
+        noiseSuppression: true,
+        autoGainControl: true
+      }
+    }).then(function (stream) {
+      mediaStream = stream;
+
+      try {
+        mediaRecorder = new MediaRecorder(stream, audioOptions);
+      } catch (e) {
+        try {
+          mediaRecorder = new MediaRecorder(stream);
+          selectedMimeType = mediaRecorder.mimeType || 'audio/webm';
+        } catch (err) {
+          stopTracks();
+          setStatus('❌ Audio recorder চালু করা যায়নি।');
+          return;
         }
       }
 
-      var options = mimeType ? { mimeType: mimeType } : {};
-      mediaRecorder = new MediaRecorder(streamObj, options);
+      selectedMimeType = mediaRecorder.mimeType || selectedMimeType || 'audio/webm';
 
-      mediaRecorder.ondataavailable = function(e) {
-        if (e.data && e.data.size > 0) {
-          audioChunks.push(e.data);
+      mediaRecorder.ondataavailable = function (event) {
+        if (event.data && event.data.size > 0) {
+          audioChunks.push(event.data);
         }
       };
 
-      mediaRecorder.onstop = async function() {
-        if (streamObj) {
-          streamObj.getTracks().forEach(track => track.stop());
-        }
+      mediaRecorder.onerror = function () {
+        setStatus('❌ Recording-এর সময় সমস্যা হয়েছে।');
+      };
 
-        var blobType = mediaRecorder.mimeType || 'audio/webm';
-        var audioBlob = new Blob(audioChunks, { type: blobType });
+      mediaRecorder.onstop = async function () {
+        stopTracks();
 
-        if (audioBlob.size < 500) {
-          status.textContent = '⚠️ কথা খুব ছোট ছিল বা শোনা যায়নি';
+        var finalType = selectedMimeType || 'audio/webm';
+        var audioBlob = new Blob(audioChunks, { type: finalType });
+        audioChunks = [];
+
+        if (!audioBlob.size) {
+          isProcessing = false;
+          micButton.disabled = false;
+          setStatus('⚠️ কোনো অডিও পাওয়া যায়নি। আবার চেষ্টা করুন।');
           return;
         }
 
-        await transcribeAudio(audioBlob);
+        isProcessing = true;
+        micButton.disabled = true;
+        setStatus('🤖 Gemini অডিও শুনে বাংলা লেখা তৈরি করছে...');
+
+        try {
+          var transcript = await transcribeWithGemini(audioBlob, finalType);
+
+          var oldText = String(textOutput.value || '').trim();
+          if (oldText) {
+            textOutput.value = oldText + ' ' + transcript;
+          } else {
+            textOutput.value = transcript;
+          }
+
+          setStatus('✅ লেখা প্রস্তুত হয়েছে। প্রয়োজন হলে সম্পাদনা করে ডায়েরিতে পাঠান।');
+        } catch (error) {
+          console.error(error);
+          setStatus('❌ ' + (error && error.message
+            ? error.message
+            : 'অডিও থেকে লেখা তৈরি করা যায়নি।'));
+        } finally {
+          isProcessing = false;
+          micButton.disabled = false;
+        }
       };
 
-      // প্রতি ১০০০ মিলিসেকেন্ডে ডাটা জমা করা যেন বাফার মিস না হয়
-      mediaRecorder.start(1000);
-      isRecording = true;
-      micBtn.classList.add('recording');
-      micBtn.innerHTML = '🛑';
-      status.textContent = '🔴 কথা শুনছি... শেষ করতে আবার চাপুন';
-    } catch(err) {
-      status.textContent = '⚠️ মাইক্রোফোন চালু করা যায়নি';
-    }
+      try {
+        mediaRecorder.start(250);
+        isRecording = true;
+        micButton.classList.add('recording');
+        micButton.textContent = '⏹️';
+        setStatus('🔴 রেকর্ড হচ্ছে... কথা বলুন। শেষ হলে আবার ⏹️ চাপুন।');
+      } catch (e) {
+        stopTracks();
+        mediaRecorder = null;
+        setStatus('❌ Recording শুরু করা যায়নি।');
+      }
+    }).catch(function (error) {
+      console.error(error);
+
+      var message = '❌ Microphone চালু করা যায়নি।';
+      if (error && error.name === 'NotAllowedError') {
+        message = '⚠️ Microphone permission Allow করুন।';
+      } else if (error && error.name === 'NotFoundError') {
+        message = '⚠️ কোনো microphone পাওয়া যায়নি।';
+      } else if (error && error.name === 'NotReadableError') {
+        message = '⚠️ Microphone অন্য কোনো app ব্যবহার করছে।';
+      }
+
+      setStatus(message);
+    });
   }
 
   function stopRecording() {
-    if (mediaRecorder && isRecording) {
+    if (!mediaRecorder || mediaRecorder.state === 'inactive') {
       isRecording = false;
-      micBtn.classList.remove('recording');
-      micBtn.innerHTML = '🎙️';
-      status.textContent = '⏳ লেখা তৈরি হচ্ছে...';
-      mediaRecorder.stop();
-    }
-  }
-
-  async function transcribeAudio(audioBlob) {
-    if (GROQ_API_KEY === "YOUR_GROQ_API_KEY_HERE") {
-      alert("অনুগ্রহ করে কোডে আপনার Groq API Key টি বসান!");
-      status.textContent = "API Key প্রয়োজন";
+      micButton.classList.remove('recording');
+      micButton.textContent = '🎙️';
       return;
     }
-
-    var ext = audioBlob.type.includes('mp4') ? 'mp4' : 'webm';
-    var formData = new FormData();
-    formData.append("file", audioBlob, "speech." + ext);
-    formData.append("model", "whisper-large-v3");
-    formData.append("language", "bn");
-    formData.append("temperature", "0");
-    formData.append("response_format", "json");
 
     try {
-      var response = await fetch("https://api.groq.com/openai/v1/audio/transcriptions", {
-        method: "POST",
-        headers: {
-          "Authorization": "Bearer " + GROQ_API_KEY
-        },
-        body: formData
-      });
-
-      var data = await response.json();
-
-      if (data.error) {
-        status.textContent = 'API ত্রুটি: ' + (data.error.message || 'ব্যর্থ হয়েছে');
-        return;
-      }
-
-      if (data.text && data.text.trim()) {
-        var newText = data.text.trim();
-        var prevText = noteArea.value.trim();
-        noteArea.value = prevText ? (prevText + " " + newText) : newText;
-        status.textContent = '✅ সফলভাবে লেখা সম্পন্ন হয়েছে!';
-      } else {
-        status.textContent = '⚠️ কোনো স্পষ্ট কথা শনাক্ত হয়নি';
-      }
-    } catch(err) {
-      status.textContent = '⚠️ ইন্টারনেট বা সার্ভার সমস্যা';
+      mediaRecorder.stop();
+    } catch (e) {
+      stopTracks();
     }
+
+    isRecording = false;
+    micButton.classList.remove('recording');
+    micButton.textContent = '🎙️';
+    setStatus('⏳ রেকর্ডিং বন্ধ হচ্ছে...');
   }
 
-  micBtn.addEventListener('click', function() {
-    if (!isRecording) {
-      startRecording();
-    } else {
-      stopRecording();
-    }
-  });
+  function submitToDiary() {
+    var text = String(textOutput.value || '').trim();
 
-  clearBtn.addEventListener('click', function() {
-    if (confirm('আপনি কি বক্সের সব লেখা মুছে ফেলতে চান?')) {
-      if (isRecording) stopRecording();
-      noteArea.value = '';
-      status.textContent = 'কথা বলতে মাইক চাপুন';
-    }
-  });
-
-  submitBtn.addEventListener('click', function() {
-    if (isRecording) stopRecording();
-
-    var textToSend = noteArea.value.trim();
-    if (!textToSend) {
-      alert('বক্সে কোনো লেখা নেই!');
+    if (!text) {
+      setStatus('⚠️ ডায়েরিতে পাঠানোর মতো কোনো লেখা নেই।');
       return;
     }
 
-    if (window.opener && !window.opener.closed) {
+    if (!parentOrigin) {
+      setStatus('❌ মূল ডায়েরির parentOrigin পাওয়া যায়নি।');
+      return;
+    }
+
+    if (!token) {
+      setStatus('❌ Voice session token পাওয়া যায়নি।');
+      return;
+    }
+
+    try {
       window.opener.postMessage({
         type: 'DIARY_VOICE_TRANSCRIPT',
         token: token,
-        text: textToSend
+        text: text
       }, parentOrigin);
 
-      window.close();
+      setStatus('✅ লেখা মূল ডায়েরিতে পাঠানো হয়েছে।');
+
+      setTimeout(function () {
+        try { window.close(); } catch (e) {}
+      }, 450);
+    } catch (e) {
+      console.error(e);
+      setStatus('❌ মূল ডায়েরিতে লেখা পাঠানো যায়নি।');
+    }
+  }
+
+  micButton.addEventListener('click', function () {
+    if (isProcessing) return;
+
+    if (isRecording) {
+      stopRecording();
     } else {
-      alert('মূল ডায়েরি উইন্ডো পাওয়া যায়নি। অনুগ্রহ করে ডায়েরির পেজ থেকে এটি খুলুন।');
+      startRecording();
     }
   });
+
+  clearButton.addEventListener('click', function () {
+    textOutput.value = '';
+    setStatus('লেখা পরিষ্কার করা হয়েছে।');
+  });
+
+  submitButton.addEventListener('click', submitToDiary);
+
+  saveKeyButton.addEventListener('click', saveApiKey);
+
+  apiKeyInput.addEventListener('keydown', function (event) {
+    if (event.key === 'Enter') {
+      event.preventDefault();
+      saveApiKey();
+    }
+  });
+
+  window.addEventListener('beforeunload', function () {
+    stopTracks();
+  });
+
+  var savedKey = getSavedApiKey();
+  if (savedKey) {
+    apiKeyInput.value = savedKey;
+    setStatus('🔑 Gemini API Key প্রস্তুত। মাইক্রোফোন চালু করতে 🎙️ চাপুন।');
+  } else {
+    setStatus('🔑 প্রথমে Gemini API Key দিন।');
+  }
 
 })();
 </script>
 </body>
 </html>
+
