@@ -43,15 +43,15 @@
 </head>
 <body>
   <main class="card">
-    <h1>🎙️ ভয়েস ডায়েরি নোট</h1>
+    <h1>🎙️️ ভয়েস ডায়েরি নোট</h1>
     
     <div class="mic-wrap">
-      <button id="micBtn" class="mic" type="button" title="রেকর্ড চালু/বন্ধ করুন">🎙</button>
+      <button id="micBtn" class="mic" type="button" title="রেকর্ড চালু/বন্ধ করুন">🎙️</button>
       <div id="status">কথা বলতে মাইক চাপুন</div>
     </div>
 
     <div class="box-title">📝 লেখার বক্স (প্রয়োজনে সরাসরি এডিট করতে পারবেন):</div>
-    <textarea id="noteArea" placeholder="মাইকে চাপ দিয়ে কথা বলুন, এখানে লেখা জমা হবে... আপনি চাইলে কিবোর্ড দিয়েও এখানে টাইপ বা সংশোধন করতে পারেন।"></textarea>
+    <textarea id="noteArea" placeholder="মাইকে চাপ দিয়ে কথা বলুন, এটি একটানা শুনতেই থাকবে... আপনি টানা ৪ সেকেন্ড চুপ থাকলে বা লাল বাটনে চাপলে এটি থামবে।"></textarea>
 
     <div class="action-btns">
       <button id="clearBtn" class="btn-clear" type="button">মুছে ফেলুন</button>
@@ -69,7 +69,10 @@
 
   var SR = window.SpeechRecognition || window.webkitSpeechRecognition;
   var recognition = null;
-  var isRecording = false;
+  
+  var isUserActive = false;
+  var silenceTimer = null; // ৪ সেকেন্ডের টাইমার
+  var restartTimer = null;
 
   var micBtn = document.getElementById('micBtn');
   var status = document.getElementById('status');
@@ -77,24 +80,34 @@
   var clearBtn = document.getElementById('clearBtn');
   var submitBtn = document.getElementById('submitBtn');
 
-  var textBeforeCurrentSpeech = '';
-  var silenceTimer = null; // ২ সেকেন্ডের টাইমার
+  var baseText = '';
 
-  function resetSilenceTimer() {
+  function cleanAppend(base, addition) {
+    base = (base || '').trim();
+    addition = (addition || '').trim();
+    if (!base) return addition;
+    if (!addition) return base;
+    return base + ' ' + addition;
+  }
+
+  // কথা চলাকালীন ৪ সেকেন্ডের সাইলেন্স টাইমার রিসেট করা
+  function triggerSilenceTimer() {
     clearTimeout(silenceTimer);
-    if (isRecording) {
+    if (isUserActive) {
       silenceTimer = setTimeout(function() {
-        if (isRecording) {
-          stopRecognition();
+        if (isUserActive) {
+          stopAll(); // একটানা ৪ সেকেন্ড কোনো শব্দ না এলে তবেই বন্ধ হবে
+          status.textContent = '⏱️ ৪ সেকেন্ড নীরব থাকায় রেকর্ডিং সম্পন্ন হয়েছে';
         }
-      }, 4000); // ৪ সেকেন্ড কথা বন্ধ থাকলে স্বয়ংক্রিয়ভাবে থামবে
+      }, 4000); // ৪ সেকেন্ড (৪০০০ মিলিসেকেন্ড)
     }
   }
 
-  function startRecognition() {
-    if (!SR) {
-      status.textContent = '⚠️ আপনার ব্রাউজারে Speech Recognition সাপোর্ট নেই';
-      return;
+  function launchRecognition() {
+    if (!isUserActive) return;
+
+    if (recognition) {
+      try { recognition.abort(); } catch(e) {}
     }
 
     recognition = new SR();
@@ -102,94 +115,113 @@
     recognition.continuous = true;
     recognition.interimResults = true;
 
-    // বর্তমান বক্সে ইতিমধ্যে যা লেখা আছে তা সংরক্ষণ রাখা
-    textBeforeCurrentSpeech = noteArea.value;
-    if (textBeforeCurrentSpeech && !textBeforeCurrentSpeech.endsWith(' ')) {
-      textBeforeCurrentSpeech += ' ';
-    }
+    baseText = noteArea.value;
 
     recognition.onstart = function() {
-      isRecording = true;
       micBtn.classList.add('recording');
       micBtn.innerHTML = '🛑';
-      status.textContent = '🔴 কথা শুনছে... (৪ সেকেন্ড চুপ থাকলে থামবে)';
-      resetSilenceTimer();
+      status.textContent = '🔴 কথা শুনছে... (৪ সেকেন্ড বিরতি না দিলে থামবে না)';
+      triggerSilenceTimer();
     };
 
     recognition.onresult = function(event) {
-      resetSilenceTimer(); // কথা চলাকালীন প্রতি শব্দে টাইমার পুনরায় রিসেট হবে
+      triggerSilenceTimer(); // কথা বললে টাইমার আবার নতুন করে ৪ সেকেন্ড গণনা করবে
 
       var interim = '';
       var finals = '';
 
       for (var i = event.resultIndex; i < event.results.length; ++i) {
+        var chunk = event.results[i][0].transcript;
         if (event.results[i].isFinal) {
-          finals += event.results[i][0].transcript;
+          finals += chunk;
         } else {
-          interim += event.results[i][0].transcript;
+          interim += chunk;
         }
       }
 
-      // আগের টেক্সটের সাথে নতুন বলা কথাগুলো যোগ করা (কোনো কিছু মুছে যাবে না)
       var currentSpoken = (finals + interim).trim();
       if (currentSpoken) {
-        noteArea.value = textBeforeCurrentSpeech + currentSpoken;
+        noteArea.value = cleanAppend(baseText, currentSpoken);
         noteArea.scrollTop = noteArea.scrollHeight;
+      }
+
+      if (finals.trim()) {
+        baseText = cleanAppend(baseText, finals);
       }
     };
 
     recognition.onerror = function(event) {
-      if (event.error !== 'no-speech') {
-        status.textContent = 'ভয়েস ত্রুটি: ' + event.error;
-      }
+      // ব্রাউজার কোনো শব্দ না পেয়ে এরর দিলেও ৪ সেকেন্ডের আগে থামবে না
     };
 
     recognition.onend = function() {
-      clearTimeout(silenceTimer);
-      isRecording = false;
-      micBtn.classList.remove('recording');
-      micBtn.innerHTML = '🎙️';
-      status.textContent = 'থামানো হয়েছে (আবার কথা বলতে মাইক চাপুন)';
-      // সেশন শেষ হলে বর্তমান বক্সের মান আপডেট রাখা
-      textBeforeCurrentSpeech = noteArea.value;
-      if (textBeforeCurrentSpeech && !textBeforeCurrentSpeech.endsWith(' ')) {
-        textBeforeCurrentSpeech += ' ';
+      // ব্রাউজার যদি মাঝে নিজে থেকে সংযোগ কাটে, কিন্তু ৪ সেকেন্ড পার না হয়—তবে সঙ্গে সঙ্গে রিস্টার্ট হবে
+      if (isUserActive) {
+        baseText = noteArea.value;
+        clearTimeout(restartTimer);
+        restartTimer = setTimeout(function() {
+          if (isUserActive) {
+            launchRecognition();
+          }
+        }, 80);
+      } else {
+        micBtn.classList.remove('recording');
+        micBtn.innerHTML = '🎙️';
       }
     };
 
     try {
       recognition.start();
     } catch(e) {
-      isRecording = false;
+      if (isUserActive) {
+        clearTimeout(restartTimer);
+        restartTimer = setTimeout(launchRecognition, 200);
+      }
     }
   }
 
-  function stopRecognition() {
-    clearTimeout(silenceTimer);
-    if (recognition) {
-      recognition.stop();
+  function startAll() {
+    if (!SR) {
+      alert('আপনার ব্রাউজারে ভয়েস সাপোর্ট নেই। Chrome বা Edge ব্যবহার করুন।');
+      return;
     }
-    isRecording = false;
+    isUserActive = true;
+    baseText = noteArea.value;
+    launchRecognition();
+  }
+
+  function stopAll() {
+    isUserActive = false;
+    clearTimeout(silenceTimer);
+    clearTimeout(restartTimer);
+    if (recognition) {
+      try { recognition.stop(); } catch(e) {}
+    }
+    micBtn.classList.remove('recording');
+    micBtn.innerHTML = '🎙️';
+    status.textContent = 'থামানো হয়েছে (আবার শুরু করতে মাইক চাপুন)';
   }
 
   micBtn.addEventListener('click', function() {
-    if (!isRecording) {
-      startRecognition();
+    if (!isUserActive) {
+      startAll();
     } else {
-      stopRecognition();
+      stopAll();
     }
   });
 
   clearBtn.addEventListener('click', function() {
     if (confirm('আপনি কি বক্সের সব লেখা মুছে ফেলতে চান?')) {
       noteArea.value = '';
-      textBeforeCurrentSpeech = '';
-      if (isRecording) stopRecognition();
+      baseText = '';
+      if (isUserActive) {
+        stopAll();
+      }
     }
   });
 
   submitBtn.addEventListener('click', function() {
-    if (isRecording) stopRecognition();
+    stopAll();
 
     var textToSend = noteArea.value.trim();
     if (!textToSend) {
@@ -205,15 +237,15 @@
         type: 'DIARY_VOICE_TRANSCRIPT',
         token: token,
         text: textToSend
-      }, parentOrigin || '*');[span_0](start_span)[span_0](end_span)[span_1](start_span)[span_1](end_span)
+      }, parentOrigin || '*');[span_2](start_span)[span_2](end_span)[span_3](start_span)[span_3](end_span)
 
       setTimeout(function() {
-        window.close();[span_2](start_span)[span_2](end_span)
+        window.close();[span_4](start_span)[span_4](end_span)
       }, 500);
     } else {
-      alert('মূল ডায়েরি উইন্ডো পাওয়া যায়নি। অনুগ্রহ করে ডায়েরির পেজ থেকে এটি খুলুন।');[span_3](start_span)[span_3](end_span)
+      alert('মূল ডায়েরি উইন্ডো পাওয়া যায়নি। অনুগ্রহ করে ডায়েরির পেজ থেকে এটি খুলুন।');[span_5](start_span)[span_5](end_span)
       submitBtn.disabled = false;
-      status.textContent = '⚠ পাঠানোর ব্যর্থ হয়েছে';
+      status.textContent = '⚠️ পাঠানো ব্যর্থ হয়েছে';
     }
   });
 
@@ -221,5 +253,4 @@
 </script>
 </body>
 </html>
-
 
