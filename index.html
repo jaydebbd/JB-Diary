@@ -43,7 +43,7 @@
 </head>
 <body>
   <main class="card">
-    <h1>🎙️ ভয়েস ডায়েরি নোট</h1>
+    <h1>🎙️️ ভয়েস ডায়েরি নোট</h1>
     
     <div class="mic-wrap">
       <button id="micBtn" class="mic" type="button" title="রেকর্ড চালু/বন্ধ করুন">🎙</button>
@@ -91,7 +91,6 @@
     recognition.continuous = true;
     recognition.interimResults = true;
 
-    // নতুন সেশন শুরু করার সময় বর্তমান টেক্সট সংরক্ষিত রাখা
     baseText = noteArea.value;
     if (baseText && !baseText.endsWith(' ')) {
       baseText += ' ';
@@ -175,22 +174,18 @@
       return;
     }
 
-    status.textContent = '📨 ডায়েরিতে পাঠানো হচ্ছে...';
-    submitBtn.disabled = true;
-
     if (window.opener && !window.opener.closed) {
+      // অবিলম্বে প্যারেন্ট উইন্ডোতে টেক্সট পাঠানো
       window.opener.postMessage({
         type: 'DIARY_VOICE_TRANSCRIPT',
         token: token,
         text: textToSend
       }, parentOrigin);
 
-      setTimeout(function() {
-        window.close();
-      }, 500);
+      // কোনো ডিলে ছাড়া তৎক্ষণাৎ পপআপ উইন্ডো বন্ধ করা
+      window.close();
     } else {
       alert('মূল ডায়েরি উইন্ডো পাওয়া যায়নি। অনুগ্রহ করে ডায়েরির পেজ থেকে এটি খুলুন।');
-      submitBtn.disabled = false;
       status.textContent = '⚠️ পাঠানো ব্যর্থ হয়েছে';
     }
   });
