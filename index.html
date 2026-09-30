@@ -14,8 +14,8 @@
     @keyframes pulse { 50% { box-shadow:0 0 0 12px rgba(217,48,37,.15); } }
     h1 { font-size:22px; margin:8px 0; color:#1a73e8; }
     #status { margin:10px 0; font-size:15px; font-weight:600; color:#555; }
-    #live { min-height:90px; max-height:200px; overflow-y:auto; margin-top:14px; padding:12px; background:#f8fbff; border:1px solid #d2e3fc; border-radius:12px; text-align:left; font-size:15px; line-height:1.6; }
-    .btn-finish { margin-top:16px; width:100%; padding:12px; background:#1e8e3e; color:#fff; border:0; border-radius:10px; font-size:15px; font-weight:600; cursor:pointer; }
+    #live { min-height:100px; max-height:220px; overflow-y:auto; margin-top:14px; padding:12px; background:#f8fbff; border:1px solid #d2e3fc; border-radius:12px; text-align:left; font-size:16px; line-height:1.6; white-space:pre-wrap; }
+    .btn-finish { margin-top:16px; width:100%; padding:13px; background:#1e8e3e; color:#fff; border:0; border-radius:10px; font-size:15px; font-weight:600; cursor:pointer; }
   </style>
 </head>
 <body>
@@ -23,7 +23,7 @@
     <h1>🎙️ ভয়েস ডায়েরি</h1>
     <div id="status">মাইক্রোফোন চালু করতে চাপুন</div>
     <button id="mic" class="mic" type="button">🎙️</button>
-    <div id="live">কথা বলুন, এখানে লেখা দেখা যাবে...</div>
+    <div id="live">কথা বলুন, এখানে স্পষ্ট লেখা দেখা যাবে...</div>
     <button id="finishBtn" class="btn-finish" type="button">✅ ডায়েরিতে যোগ করুন ও ঠিক করুন</button>
   </main>
 
@@ -37,27 +37,17 @@
   
   var recognition = null;
   var isRecording = false;
-  var manualStop = false;
-  var restartTimer = null;
-  var currentFinalText = '';
+  var fullText = '';
 
   var mic = document.getElementById('mic');
   var status = document.getElementById('status');
   var live = document.getElementById('live');
   var finishBtn = document.getElementById('finishBtn');
 
-  function initRecognition() {
-    var SR = window.SpeechRecognition || window.webkitSpeechRecognition;
-    if (!SR) return null;
-    var r = new SR();
-    r.lang = 'bn-BD';
-    r.continuous = true;
-    r.interimResults = true;
-    return r;
-  }
+  var SR = window.SpeechRecognition || window.webkitSpeechRecognition;
 
   function sendToParentAndClose() {
-    var text = currentFinalText.trim();
+    var text = fullText.trim();
     if (!text) {
       status.textContent = '⚠️ কোনো কথা রেকর্ড হয়নি';
       return;
@@ -68,57 +58,61 @@
       window.opener.postMessage({ type: 'DIARY_VOICE_TRANSCRIPT', token: token, text: text }, parentOrigin || '*');
       setTimeout(function(){
         window.close();
-      }, 500);
+      }, 400);
     } else {
-      status.textContent = '⚠️️ মূল ডায়েরি উইন্ডো পাওয়া যায়নি';
+      status.textContent = '⚠️ মূল ডায়েরি উইন্ডো পাওয়া যায়নি';
     }
   }
 
   function startListening() {
-    if (recognition) {
-      try { recognition.abort(); } catch(e) {}
+    if (!SR) {
+      status.textContent = '⚠️ এই ব্রাউজারে ভয়েস সাপোর্ট নেই';
+      return;
     }
-    recognition = initRecognition();
-    if (!recognition) return;
+
+    try {
+      if (recognition) {
+        recognition.abort();
+      }
+    } catch(e) {}
+
+    recognition = new SR();
+    recognition.lang = 'bn-BD';
+    recognition.continuous = false;     // অ্যান্ড্রয়েড ডুপ্লিকেট রোধের মূল সমাধান
+    recognition.interimResults = false;  // শুধু চূড়ান্ত বাক্য গ্রহণ করবে
 
     recognition.onstart = function() {
-      isRecording = true;
       mic.classList.add('recording');
       status.textContent = '🔴 কথা শুনছে... কথা বলা শেষে নিচের বাটনে চাপুন';
     };
 
     recognition.onresult = function(event) {
-      var finalAcc = '';
-      var interimAcc = '';
-
-      // প্রতিবার ইভেন্ট আসলে শুরু (০) থেকে শেষ পর্যন্ত সম্পূর্ণটা নতুনভাবে স্ক্যান করা হচ্ছে
-      for (var i = 0; i < event.results.length; ++i) {
-        var transcriptPiece = event.results[i][0].transcript;
-        if (event.results[i].isFinal) {
-          finalAcc += transcriptPiece;
-        } else {
-          interimAcc += transcriptPiece;
-        }
+      var sentence = '';
+      if (event.results && event.results[0] && event.results[0][0]) {
+        sentence = event.results[0][0].transcript.trim();
       }
-
-      currentFinalText = finalAcc;
-      var displayText = (finalAcc + (interimAcc ? ' ' + interimAcc : '')).trim();
-      live.textContent = displayText || 'কথা শুনছে...';
-    };
-
-    recognition.onend = function() {
-      if (!manualStop && isRecording) {
-        clearTimeout(restartTimer);
-        restartTimer = setTimeout(startListening, 200);
-      } else {
-        mic.classList.remove('recording');
-        isRecording = false;
+      if (sentence) {
+        fullText += (fullText ? ' ' : '') + sentence;
+        live.textContent = fullText;
       }
     };
 
     recognition.onerror = function(event) {
-      if (event.error !== 'no-speech') {
-        status.textContent = 'ভয়েস ত্রুটি: ' + event.error;
+      // স্পিচ না পেলেও লিসেনিং বজায় রাখা
+    };
+
+    recognition.onend = function() {
+      // যদি ইউজার নিজে বন্ধ না করে, সাথে সাথে পরবর্তী বাক্যের জন্য ফ্রেশ সেশন চালু হবে
+      if (isRecording) {
+        try {
+          recognition.start();
+        } catch(e) {
+          setTimeout(function() {
+            if (isRecording) startListening();
+          }, 150);
+        }
+      } else {
+        mic.classList.remove('recording');
       }
     };
 
@@ -129,26 +123,26 @@
 
   mic.addEventListener('click', function() {
     if (!isRecording) {
-      manualStop = false;
-      currentFinalText = '';
-      live.textContent = 'কথা বলুন, এখানে লেখা দেখা যাবে...';
+      isRecording = true;
+      fullText = '';
+      live.textContent = 'কথা বলুন...';
       startListening();
     } else {
-      manualStop = true;
+      isRecording = false;
       if (recognition) recognition.stop();
+      mic.classList.remove('recording');
       status.textContent = 'থামানো হয়েছে';
     }
   });
 
   finishBtn.addEventListener('click', function() {
-    manualStop = true;
+    isRecording = false;
     if (recognition) recognition.stop();
     sendToParentAndClose();
   });
 
   window.onload = function() {
-    manualStop = false;
-    currentFinalText = '';
+    isRecording = true;
     startListening();
   };
 })();
