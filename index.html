@@ -165,8 +165,13 @@
     }
   });
 
+  // দ্রুত ও সরাসরি মূল ডায়েরিতে পাঠানোর অংশ
   submitBtn.addEventListener('click', function() {
-    if (isRecording) stopRecognition();
+    // মাইক চালু থাকলে ব্যাকগ্রাউন্ড বন্ধ না হওয়া পর্যন্ত অপেক্ষা না করে দ্রুত বন্ধ করা
+    if (isRecording && recognition) {
+      recognition.abort(); // stop() এর চেয়ে abort() তাৎক্ষণিক কানেকশন কাটে
+      isRecording = false;
+    }
 
     var textToSend = noteArea.value.trim();
     if (!textToSend) {
@@ -175,14 +180,14 @@
     }
 
     if (window.opener && !window.opener.closed) {
-      // অবিলম্বে প্যারেন্ট উইন্ডোতে টেক্সট পাঠানো
+      // কোনো ডিলে ছাড়া সরাসরি মূল ফাইলে মেসেজ পাঠানো
       window.opener.postMessage({
         type: 'DIARY_VOICE_TRANSCRIPT',
         token: token,
         text: textToSend
       }, parentOrigin);
 
-      // কোনো ডিলে ছাড়া তৎক্ষণাৎ পপআপ উইন্ডো বন্ধ করা
+      // কোনো অপেক্ষা (setTimeout) ছাড়া সঙ্গে সঙ্গে উইন্ডো বন্ধ হবে
       window.close();
     } else {
       alert('মূল ডায়েরি উইন্ডো পাওয়া যায়নি। অনুগ্রহ করে ডায়েরির পেজ থেকে এটি খুলুন।');
