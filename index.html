@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
-  <title>স্মার্ট ভয়েস ডায়েরি নোট</title>
+  <title>স্মার্ট AI ভয়েস ডায়েরি</title>
   <style>
     :root { font-family: system-ui, -apple-system, "Noto Sans Bengali", sans-serif; }
     * { box-sizing: border-box; }
@@ -65,7 +65,7 @@
   'use strict';
 
   // আপনার Groq API Key এখানে বসান
-  var GROQ_API_KEY = "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";
+  var GROQ_API_KEY = "YOUR_GROQ_API_KEY_HERE";
 
   var params = new URLSearchParams(location.search);
   var token = params.get('token') || '';
@@ -94,10 +94,8 @@
       };
 
       mediaRecorder.onstop = async function() {
-        // মাইক্রোফোন ট্র্যাক বন্ধ করা
         stream.getTracks().forEach(track => track.stop());
-        
-        var audioBlob = new Blob(audioChunks, { type: 'audio/m4a' });
+        var audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
         await transcribeAudio(audioBlob);
       };
 
@@ -121,21 +119,20 @@
     }
   }
 
-
-
-
-  // AI-এর মাধ্যমে অডিও থেকে বাংলায় নির্ভুল টেক্সট আনা
   async function transcribeAudio(audioBlob) {
-    if (GROQ_API_KEY === "YOUR_GROQ_API_KEY_HERE") {
+    if (GROQ_API_KEY === "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") {
       alert("অনুগ্রহ করে কোডে আপনার Groq API Key টি বসান!");
       status.textContent = "API Key প্রয়োজন";
       return;
     }
 
     var formData = new FormData();
-    formData.append("file", audioBlob, "audio.m4a");
+    formData.append("file", audioBlob, "audio.webm");
     formData.append("model", "whisper-large-v3");
     formData.append("language", "bn");
+    // প্রমিত বাংলা ব্যাকরণ, সঠিক বানান ও দাঁড়ি-কমার নির্দেশনা
+    formData.append("prompt", "প্রমিত বাংলা ব্যাকরণ, সঠিক বানান ও উপযুক্ত দাঁড়ি-কমা ব্যবহার করে লিখুন। যেমন: অনেক দিন আগের কথা, এক দেশে ছিল এক রাজা।");
+    formData.append("temperature", "0");
     formData.append("response_format", "json");
 
     try {
