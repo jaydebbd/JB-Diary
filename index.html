@@ -87,7 +87,7 @@
         if (isRecording) {
           stopRecognition();
         }
-      }, 2000); // ২ সেকেন্ড কথা বন্ধ থাকলে স্বয়ংক্রিয়ভাবে থামবে
+      }, 4000); // ৪ সেকেন্ড কথা বন্ধ থাকলে স্বয়ংক্রিয়ভাবে থামবে
     }
   }
 
@@ -112,7 +112,7 @@
       isRecording = true;
       micBtn.classList.add('recording');
       micBtn.innerHTML = '🛑';
-      status.textContent = '🔴 কথা শুনছে... (২ সেকেন্ড চুপ থাকলে থামবে)';
+      status.textContent = '🔴 কথা শুনছে... (৪ সেকেন্ড চুপ থাকলে থামবে)';
       resetSilenceTimer();
     };
 
@@ -221,3 +221,5 @@
 </script>
 </body>
 </html>
+
+
