@@ -65,7 +65,7 @@
   'use strict';
 
   // আপনার Groq API Key এখানে বসান
-  var GROQ_API_KEY = "YOUR_GROQ_API_KEY_HERE";
+  var GROQ_API_KEY = "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";
 
   var params = new URLSearchParams(location.search);
   var token = params.get('token') || '';
@@ -80,58 +80,81 @@
   var mediaRecorder = null;
   var audioChunks = [];
   var isRecording = false;
+  var streamObj = null;
 
   async function startRecording() {
     try {
-      var stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      streamObj = await navigator.mediaDevices.getUserMedia({ audio: true });
       audioChunks = [];
-      mediaRecorder = new MediaRecorder(stream);
+
+      // অ্যান্ড্রয়েড ক্রোমের জন্য সেরা সমর্থিত অডিও ফরম্যাট বাছাই
+      var mimeType = 'audio/webm';
+      if (!MediaRecorder.isTypeSupported('audio/webm')) {
+        if (MediaRecorder.isTypeSupported('audio/mp4')) {
+          mimeType = 'audio/mp4';
+        } else {
+          mimeType = '';
+        }
+      }
+
+      var options = mimeType ? { mimeType: mimeType } : {};
+      mediaRecorder = new MediaRecorder(streamObj, options);
 
       mediaRecorder.ondataavailable = function(e) {
-        if (e.data.size > 0) {
+        if (e.data && e.data.size > 0) {
           audioChunks.push(e.data);
         }
       };
 
       mediaRecorder.onstop = async function() {
-        stream.getTracks().forEach(track => track.stop());
-        var audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
+        if (streamObj) {
+          streamObj.getTracks().forEach(track => track.stop());
+        }
+
+        var blobType = mediaRecorder.mimeType || 'audio/webm';
+        var audioBlob = new Blob(audioChunks, { type: blobType });
+
+        if (audioBlob.size < 500) {
+          status.textContent = '⚠️ কথা খুব ছোট ছিল বা শোনা যায়নি';
+          return;
+        }
+
         await transcribeAudio(audioBlob);
       };
 
-      mediaRecorder.start();
+      // প্রতি ১০০০ মিলিসেকেন্ডে ডাটা জমা করা যেন বাফার মিস না হয়
+      mediaRecorder.start(1000);
       isRecording = true;
       micBtn.classList.add('recording');
       micBtn.innerHTML = '🛑';
       status.textContent = '🔴 কথা শুনছি... শেষ করতে আবার চাপুন';
     } catch(err) {
-      status.textContent = '⚠️ মাইক্রোফোন অ্যাক্সেস পাওয়া যায়নি';
+      status.textContent = '⚠️ মাইক্রোফোন চালু করা যায়নি';
     }
   }
 
   function stopRecording() {
     if (mediaRecorder && isRecording) {
-      mediaRecorder.stop();
       isRecording = false;
       micBtn.classList.remove('recording');
       micBtn.innerHTML = '🎙️';
       status.textContent = '⏳ লেখা তৈরি হচ্ছে...';
+      mediaRecorder.stop();
     }
   }
 
   async function transcribeAudio(audioBlob) {
-    if (GROQ_API_KEY === "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") {
+    if (GROQ_API_KEY === "YOUR_GROQ_API_KEY_HERE") {
       alert("অনুগ্রহ করে কোডে আপনার Groq API Key টি বসান!");
       status.textContent = "API Key প্রয়োজন";
       return;
     }
 
+    var ext = audioBlob.type.includes('mp4') ? 'mp4' : 'webm';
     var formData = new FormData();
-    formData.append("file", audioBlob, "audio.webm");
+    formData.append("file", audioBlob, "speech." + ext);
     formData.append("model", "whisper-large-v3");
     formData.append("language", "bn");
-    // প্রমিত বাংলা ব্যাকরণ, সঠিক বানান ও দাঁড়ি-কমার নির্দেশনা
-    formData.append("prompt", "প্রমিত বাংলা ব্যাকরণ, সঠিক বানান ও উপযুক্ত দাঁড়ি-কমা ব্যবহার করে লিখুন। যেমন: অনেক দিন আগের কথা, এক দেশে ছিল এক রাজা।");
     formData.append("temperature", "0");
     formData.append("response_format", "json");
 
@@ -145,16 +168,22 @@
       });
 
       var data = await response.json();
-      if (data.text) {
+
+      if (data.error) {
+        status.textContent = 'API ত্রুটি: ' + (data.error.message || 'ব্যর্থ হয়েছে');
+        return;
+      }
+
+      if (data.text && data.text.trim()) {
         var newText = data.text.trim();
         var prevText = noteArea.value.trim();
         noteArea.value = prevText ? (prevText + " " + newText) : newText;
         status.textContent = '✅ সফলভাবে লেখা সম্পন্ন হয়েছে!';
       } else {
-        status.textContent = '⚠️ কথা স্পষ্ট বোঝা যায়নি, আবার চেষ্টা করুন';
+        status.textContent = '⚠️ কোনো স্পষ্ট কথা শনাক্ত হয়নি';
       }
     } catch(err) {
-      status.textContent = '⚠️ টেক্সট কনভার্ট করতে সমস্যা হয়েছে';
+      status.textContent = '⚠️ ইন্টারনেট বা সার্ভার সমস্যা';
     }
   }
 
@@ -200,6 +229,3 @@
 </script>
 </body>
 </html>
-
-
-
