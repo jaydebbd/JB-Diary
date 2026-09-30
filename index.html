@@ -46,12 +46,12 @@
     <h1>🎙️ ভয়েস ডায়েরি নোট</h1>
     
     <div class="mic-wrap">
-      <button id="micBtn" class="mic" type="button" title="রেকর্ড চালু/বন্ধ করুন">🎙️</button>
+      <button id="micBtn" class="mic" type="button" title="রেকর্ড চালু/বন্ধ করুন">🎙</button>
       <div id="status">কথা বলতে মাইক চাপুন</div>
     </div>
 
     <div class="box-title">📝 লেখার বক্স (প্রয়োজনে সরাসরি এডিট করতে পারবেন):</div>
-    <textarea id="noteArea" placeholder="মাইকে চাপ দিয়ে কথা বলুন, এটি একটানা শুনতেই থাকবে... আপনি চাইলে কথা বলার মাঝে এখানে হাত দিয়ে টাইপ বা এডিটও করতে পারেন।"></textarea>
+    <textarea id="noteArea" placeholder="মাইকে চাপ দিয়ে কথা বলুন, এখানে লেখা জমা হবে... আপনি চাইলে কিবোর্ড দিয়েও এখানে টাইপ বা সংশোধন করতে পারেন।"></textarea>
 
     <div class="action-btns">
       <button id="clearBtn" class="btn-clear" type="button">মুছে ফেলুন</button>
@@ -69,10 +69,7 @@
 
   var SR = window.SpeechRecognition || window.webkitSpeechRecognition;
   var recognition = null;
-  
-  // ইউজার নিজে বাটন চেপে অফ না করা পর্যন্ত এটি true থাকবে
-  var shouldKeepListening = false;
-  var restartTimer = null;
+  var isRecording = false;
 
   var micBtn = document.getElementById('micBtn');
   var status = document.getElementById('status');
@@ -80,22 +77,24 @@
   var clearBtn = document.getElementById('clearBtn');
   var submitBtn = document.getElementById('submitBtn');
 
-  // সেশনের আগের স্থায়ী টেক্সট
-  var baseText = '';
+  var textBeforeCurrentSpeech = '';
+  var silenceTimer = null; // ২ সেকেন্ডের টাইমার
 
-  function cleanAppend(base, addition) {
-    base = (base || '').trim();
-    addition = (addition || '').trim();
-    if (!base) return addition;
-    if (!addition) return base;
-    return base + ' ' + addition;
+  function resetSilenceTimer() {
+    clearTimeout(silenceTimer);
+    if (isRecording) {
+      silenceTimer = setTimeout(function() {
+        if (isRecording) {
+          stopRecognition();
+        }
+      }, 2000); // ২ সেকেন্ড কথা বন্ধ থাকলে স্বয়ংক্রিয়ভাবে থামবে
+    }
   }
 
-  function launchRecognition() {
-    if (!shouldKeepListening) return;
-
-    if (recognition) {
-      try { recognition.abort(); } catch(e) {}
+  function startRecognition() {
+    if (!SR) {
+      status.textContent = '⚠️ আপনার ব্রাউজারে Speech Recognition সাপোর্ট নেই';
+      return;
     }
 
     recognition = new SR();
@@ -103,112 +102,94 @@
     recognition.continuous = true;
     recognition.interimResults = true;
 
-    // বর্তমান বক্সের লেখাকে স্থায়ী ভিত্তি হিসেবে ধরে নেওয়া
-    baseText = noteArea.value;
+    // বর্তমান বক্সে ইতিমধ্যে যা লেখা আছে তা সংরক্ষণ রাখা
+    textBeforeCurrentSpeech = noteArea.value;
+    if (textBeforeCurrentSpeech && !textBeforeCurrentSpeech.endsWith(' ')) {
+      textBeforeCurrentSpeech += ' ';
+    }
 
     recognition.onstart = function() {
+      isRecording = true;
       micBtn.classList.add('recording');
       micBtn.innerHTML = '🛑';
-      status.textContent = '🔴 কথা শুনছে... (বন্ধ করতে বাটনে চাপুন)';
+      status.textContent = '🔴 কথা শুনছে... (২ সেকেন্ড চুপ থাকলে থামবে)';
+      resetSilenceTimer();
     };
 
     recognition.onresult = function(event) {
-      var currentFinals = '';
-      var currentInterim = '';
+      resetSilenceTimer(); // কথা চলাকালীন প্রতি শব্দে টাইমার পুনরায় রিসেট হবে
+
+      var interim = '';
+      var finals = '';
 
       for (var i = event.resultIndex; i < event.results.length; ++i) {
-        var chunk = event.results[i][0].transcript;
         if (event.results[i].isFinal) {
-          currentFinals += chunk;
+          finals += event.results[i][0].transcript;
         } else {
-          currentInterim += chunk;
+          interim += event.results[i][0].transcript;
         }
       }
 
-      var combinedLive = (currentFinals + currentInterim).trim();
-      if (combinedLive) {
-        noteArea.value = cleanAppend(baseText, combinedLive);
+      // আগের টেক্সটের সাথে নতুন বলা কথাগুলো যোগ করা (কোনো কিছু মুছে যাবে না)
+      var currentSpoken = (finals + interim).trim();
+      if (currentSpoken) {
+        noteArea.value = textBeforeCurrentSpeech + currentSpoken;
         noteArea.scrollTop = noteArea.scrollHeight;
-      }
-
-      // যদি কোনো চূড়ান্ত অংশ পাওয়া যায়, তবে তা স্থায়ী টেক্সটে যুক্ত করে রাখা
-      if (currentFinals.trim()) {
-        baseText = cleanAppend(baseText, currentFinals);
       }
     };
 
     recognition.onerror = function(event) {
-      // no-speech হলেও যেন সেশন না কাটে
+      if (event.error !== 'no-speech') {
+        status.textContent = 'ভয়েস ত্রুটি: ' + event.error;
+      }
     };
 
     recognition.onend = function() {
-      // ইউজার নিজে না থামালে স্বয়ংক্রিয়ভাবে мгновенно (মুহূর্তের মধ্যে) ফ্রেশ সেশন চালু হবে
-      if (shouldKeepListening) {
-        baseText = noteArea.value; // বক্সে যা জমা হয়েছে তা লক করে রাখা
-        clearTimeout(restartTimer);
-        restartTimer = setTimeout(function() {
-          if (shouldKeepListening) {
-            launchRecognition();
-          }
-        }, 100);
-      } else {
-        micBtn.classList.remove('recording');
-        micBtn.innerHTML = '🎙️';
-        status.textContent = 'থামানো হয়েছে (আবার শুরু করতে মাইক চাপুন)';
+      clearTimeout(silenceTimer);
+      isRecording = false;
+      micBtn.classList.remove('recording');
+      micBtn.innerHTML = '🎙️';
+      status.textContent = 'থামানো হয়েছে (আবার কথা বলতে মাইক চাপুন)';
+      // সেশন শেষ হলে বর্তমান বক্সের মান আপডেট রাখা
+      textBeforeCurrentSpeech = noteArea.value;
+      if (textBeforeCurrentSpeech && !textBeforeCurrentSpeech.endsWith(' ')) {
+        textBeforeCurrentSpeech += ' ';
       }
     };
 
     try {
       recognition.start();
     } catch(e) {
-      if (shouldKeepListening) {
-        clearTimeout(restartTimer);
-        restartTimer = setTimeout(launchRecognition, 250);
-      }
+      isRecording = false;
     }
   }
 
-  function startAll() {
-    if (!SR) {
-      alert('আপনার ব্রাউজারে ভয়েস সাপোর্ট নেই। Chrome বা Edge ব্যবহার করুন।');
-      return;
-    }
-    shouldKeepListening = true;
-    baseText = noteArea.value;
-    launchRecognition();
-  }
-
-  function stopAll() {
-    shouldKeepListening = false;
-    clearTimeout(restartTimer);
+  function stopRecognition() {
+    clearTimeout(silenceTimer);
     if (recognition) {
-      try { recognition.stop(); } catch(e) {}
+      recognition.stop();
     }
-    micBtn.classList.remove('recording');
-    micBtn.innerHTML = '🎙️';
-    status.textContent = 'থামানো হয়েছে (আবার শুরু করতে মাইক চাপুন)';
+    isRecording = false;
   }
 
   micBtn.addEventListener('click', function() {
-    if (!shouldKeepListening) {
-      startAll();
+    if (!isRecording) {
+      startRecognition();
     } else {
-      stopAll();
+      stopRecognition();
     }
   });
 
   clearBtn.addEventListener('click', function() {
     if (confirm('আপনি কি বক্সের সব লেখা মুছে ফেলতে চান?')) {
       noteArea.value = '';
-      baseText = '';
-      if (shouldKeepListening) {
-        stopAll();
-      }
+      textBeforeCurrentSpeech = '';
+      if (isRecording) stopRecognition();
     }
   });
 
   submitBtn.addEventListener('click', function() {
-    stopAll();
+    if (isRecording) stopRecognition();
 
     var textToSend = noteArea.value.trim();
     if (!textToSend) {
@@ -224,19 +205,18 @@
         type: 'DIARY_VOICE_TRANSCRIPT',
         token: token,
         text: textToSend
-      }, parentOrigin || '*');[span_2](start_span)[span_2](end_span)[span_3](start_span)[span_3](end_span)
+      }, parentOrigin || '*');[span_0](start_span)[span_0](end_span)[span_1](start_span)[span_1](end_span)
 
       setTimeout(function() {
-        window.close();[span_4](start_span)[span_4](end_span)
+        window.close();[span_2](start_span)[span_2](end_span)
       }, 500);
     } else {
-      alert('মূল ডায়েরি উইন্ডো পাওয়া যায়নি। অনুগ্রহ করে ডায়েরির পেজ থেকে এটি খুলুন।');[span_5](start_span)[span_5](end_span)
+      alert('মূল ডায়েরি উইন্ডো পাওয়া যায়নি। অনুগ্রহ করে ডায়েরির পেজ থেকে এটি খুলুন।');[span_3](start_span)[span_3](end_span)
       submitBtn.disabled = false;
-      status.textContent = '⚠️ পাঠানো ব্যর্থ হয়েছে';
+      status.textContent = '⚠ পাঠানোর ব্যর্থ হয়েছে';
     }
   });
 
-  // পেজে প্রবেশ করলে বাটন চাপ দিয়ে অন করার জন্য প্রস্তুত থাকবে
 })();
 </script>
 </body>
