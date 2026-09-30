@@ -43,15 +43,15 @@
 </head>
 <body>
   <main class="card">
-    <h1>🎙️️ ভয়েস ডায়েরি নোট</h1>
+    <h1>🎙️ ভয়েস ডায়েরি নোট</h1>
     
     <div class="mic-wrap">
-      <button id="micBtn" class="mic" type="button" title="রেকর্ড চালু/বন্ধ করুন">🎙️</button>
+      <button id="micBtn" class="mic" type="button" title="রেকর্ড চালু/বন্ধ করুন">🎙️️</button>
       <div id="status">কথা বলতে মাইক চাপুন</div>
     </div>
 
     <div class="box-title">📝 লেখার বক্স (প্রয়োজনে সরাসরি এডিট করতে পারবেন):</div>
-    <textarea id="noteArea" placeholder="মাইকে চাপ দিয়ে কথা বলুন, এটি একটানা শুনতেই থাকবে... আপনি টানা ৪ সেকেন্ড চুপ থাকলে বা লাল বাটনে চাপলে এটি থামবে।"></textarea>
+    <textarea id="noteArea" placeholder="মাইকে চাপ দিয়ে কথা বলুন, এখানে লেখা জমা হবে... আপনি চাইলে কিবোর্ড দিয়েও এখানে টাইপ বা সংশোধন করতে পারেন।"></textarea>
 
     <div class="action-btns">
       <button id="clearBtn" class="btn-clear" type="button">মুছে ফেলুন</button>
@@ -69,10 +69,7 @@
 
   var SR = window.SpeechRecognition || window.webkitSpeechRecognition;
   var recognition = null;
-  
-  var isUserActive = false;
-  var silenceTimer = null; // ৪ সেকেন্ডের টাইমার
-  var restartTimer = null;
+  var isRecording = false;
 
   var micBtn = document.getElementById('micBtn');
   var status = document.getElementById('status');
@@ -80,34 +77,12 @@
   var clearBtn = document.getElementById('clearBtn');
   var submitBtn = document.getElementById('submitBtn');
 
-  var baseText = '';
+  var textBeforeCurrentSpeech = '';
 
-  function cleanAppend(base, addition) {
-    base = (base || '').trim();
-    addition = (addition || '').trim();
-    if (!base) return addition;
-    if (!addition) return base;
-    return base + ' ' + addition;
-  }
-
-  // কথা চলাকালীন ৪ সেকেন্ডের সাইলেন্স টাইমার রিসেট করা
-  function triggerSilenceTimer() {
-    clearTimeout(silenceTimer);
-    if (isUserActive) {
-      silenceTimer = setTimeout(function() {
-        if (isUserActive) {
-          stopAll(); // একটানা ৪ সেকেন্ড কোনো শব্দ না এলে তবেই বন্ধ হবে
-          status.textContent = '⏱️ ৪ সেকেন্ড নীরব থাকায় রেকর্ডিং সম্পন্ন হয়েছে';
-        }
-      }, 4000); // ৪ সেকেন্ড (৪০০০ মিলিসেকেন্ড)
-    }
-  }
-
-  function launchRecognition() {
-    if (!isUserActive) return;
-
-    if (recognition) {
-      try { recognition.abort(); } catch(e) {}
+  function startRecognition() {
+    if (!SR) {
+      status.textContent = '⚠️ আপনার ব্রাউজারে Speech Recognition সাপোর্ট নেই';
+      return;
     }
 
     recognition = new SR();
@@ -115,113 +90,89 @@
     recognition.continuous = true;
     recognition.interimResults = true;
 
-    baseText = noteArea.value;
+    // বর্তমান বক্সে ইতিমধ্যে যা লেখা আছে তা সংরক্ষণ রাখা
+    textBeforeCurrentSpeech = noteArea.value;
+    if (textBeforeCurrentSpeech && !textBeforeCurrentSpeech.endsWith(' ')) {
+      textBeforeCurrentSpeech += ' ';
+    }
 
     recognition.onstart = function() {
+      isRecording = true;
       micBtn.classList.add('recording');
       micBtn.innerHTML = '🛑';
-      status.textContent = '🔴 কথা শুনছে... (৪ সেকেন্ড বিরতি না দিলে থামবে না)';
-      triggerSilenceTimer();
+      status.textContent = '🔴 কথা শুনছে... শেষ করতে আবার চাপুন';
     };
 
     recognition.onresult = function(event) {
-      triggerSilenceTimer(); // কথা বললে টাইমার আবার নতুন করে ৪ সেকেন্ড গণনা করবে
-
       var interim = '';
       var finals = '';
 
       for (var i = event.resultIndex; i < event.results.length; ++i) {
-        var chunk = event.results[i][0].transcript;
         if (event.results[i].isFinal) {
-          finals += chunk;
+          finals += event.results[i][0].transcript;
         } else {
-          interim += chunk;
+          interim += event.results[i][0].transcript;
         }
       }
 
+      // আগের টেক্সটের সাথে নতুন বলা কথাগুলো যোগ করা (কোনো কিছু মুছে যাবে না)
       var currentSpoken = (finals + interim).trim();
       if (currentSpoken) {
-        noteArea.value = cleanAppend(baseText, currentSpoken);
+        noteArea.value = textBeforeCurrentSpeech + currentSpoken;
         noteArea.scrollTop = noteArea.scrollHeight;
-      }
-
-      if (finals.trim()) {
-        baseText = cleanAppend(baseText, finals);
       }
     };
 
     recognition.onerror = function(event) {
-      // ব্রাউজার কোনো শব্দ না পেয়ে এরর দিলেও ৪ সেকেন্ডের আগে থামবে না
+      if (event.error !== 'no-speech') {
+        status.textContent = 'ভয়েস ত্রুটি: ' + event.error;
+      }
     };
 
     recognition.onend = function() {
-      // ব্রাউজার যদি মাঝে নিজে থেকে সংযোগ কাটে, কিন্তু ৪ সেকেন্ড পার না হয়—তবে সঙ্গে সঙ্গে রিস্টার্ট হবে
-      if (isUserActive) {
-        baseText = noteArea.value;
-        clearTimeout(restartTimer);
-        restartTimer = setTimeout(function() {
-          if (isUserActive) {
-            launchRecognition();
-          }
-        }, 80);
-      } else {
-        micBtn.classList.remove('recording');
-        micBtn.innerHTML = '🎙️';
+      isRecording = false;
+      micBtn.classList.remove('recording');
+      micBtn.innerHTML = '🎙️';
+      status.textContent = 'থামানো হয়েছে (আবার কথা বলতে মাইক চাপুন)';
+      // সেশন শেষ হলে বর্তমান বক্সের মান আপডেট রাখা
+      textBeforeCurrentSpeech = noteArea.value;
+      if (textBeforeCurrentSpeech && !textBeforeCurrentSpeech.endsWith(' ')) {
+        textBeforeCurrentSpeech += ' ';
       }
     };
 
     try {
       recognition.start();
     } catch(e) {
-      if (isUserActive) {
-        clearTimeout(restartTimer);
-        restartTimer = setTimeout(launchRecognition, 200);
-      }
+      isRecording = false;
     }
   }
 
-  function startAll() {
-    if (!SR) {
-      alert('আপনার ব্রাউজারে ভয়েস সাপোর্ট নেই। Chrome বা Edge ব্যবহার করুন।');
-      return;
-    }
-    isUserActive = true;
-    baseText = noteArea.value;
-    launchRecognition();
-  }
-
-  function stopAll() {
-    isUserActive = false;
-    clearTimeout(silenceTimer);
-    clearTimeout(restartTimer);
+  function stopRecognition() {
     if (recognition) {
-      try { recognition.stop(); } catch(e) {}
+      recognition.stop();
     }
-    micBtn.classList.remove('recording');
-    micBtn.innerHTML = '🎙️';
-    status.textContent = 'থামানো হয়েছে (আবার শুরু করতে মাইক চাপুন)';
+    isRecording = false;
   }
 
   micBtn.addEventListener('click', function() {
-    if (!isUserActive) {
-      startAll();
+    if (!isRecording) {
+      startRecognition();
     } else {
-      stopAll();
+      stopRecognition();
     }
   });
 
   clearBtn.addEventListener('click', function() {
     if (confirm('আপনি কি বক্সের সব লেখা মুছে ফেলতে চান?')) {
       noteArea.value = '';
-      baseText = '';
-      if (isUserActive) {
-        stopAll();
-      }
+      textBeforeCurrentSpeech = '';
+      if (isRecording) stopRecognition();
     }
   });
 
   submitBtn.addEventListener('click', function() {
-    stopAll();
+    if (isRecording) stopRecognition();
 
     var textToSend = noteArea.value.trim();
     if (!textToSend) {
@@ -237,15 +188,15 @@
         type: 'DIARY_VOICE_TRANSCRIPT',
         token: token,
         text: textToSend
-      }, parentOrigin || '*');[span_2](start_span)[span_2](end_span)[span_3](start_span)[span_3](end_span)
+      }, parentOrigin || '*');
 
       setTimeout(function() {
-        window.close();[span_4](start_span)[span_4](end_span)
+        window.close();
       }, 500);
     } else {
-      alert('মূল ডায়েরি উইন্ডো পাওয়া যায়নি। অনুগ্রহ করে ডায়েরির পেজ থেকে এটি খুলুন।');[span_5](start_span)[span_5](end_span)
+      alert('মূল ডায়েরি উইন্ডো পাওয়া যায়নি। অনুগ্রহ করে ডায়েরির পেজ থেকে এটি খুলুন।');
       submitBtn.disabled = false;
-      status.textContent = '⚠️ পাঠানো ব্যর্থ হয়েছে';
+      status.textContent = '⚠️️ পাঠানোর ব্যর্থ হয়েছে';
     }
   });
 
@@ -253,4 +204,5 @@
 </script>
 </body>
 </html>
+
 
