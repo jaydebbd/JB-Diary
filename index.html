@@ -256,10 +256,9 @@
 (function () {
   'use strict';
 
-  /* ===== Models List with Automatic Fallback ===== */
-  var MODELS = ['gemini-2.5-flash', 'gemini-2.5-flash-lite', 'gemini-1.5-flash'];
+  /* ===== Models List (Primary: gemini-3.8-flash) ===== */
+  var MODELS = ['gemini-3.8-flash']; //[span_1](start_span)[span_1](end_span)
 
-  /* ===== Safe element lookup ===== */
   function $(id) { return document.getElementById(id); }
 
   var micButton = $('micButton');
@@ -275,11 +274,10 @@
 
   if (!micButton || !statusEl || !textOutput || !clearButton || !submitButton ||
       !apiToggle || !apiMenu || !apiKeyInput || !saveKeyButton || !keyStatus) {
-    console.error('Voice Diary: required HTML elements are missing.');
+    console.error('Voice Diary: Elements missing.');
     return;
   }
 
-  /* ===== URL parameters ===== */
   var token = '';
   var parentOrigin = '';
   try {
@@ -287,7 +285,7 @@
     token = params.get('token') || '';
     parentOrigin = params.get('parentOrigin') || '';
   } catch (e) {
-    console.warn('URL parameters could not be read:', e);
+    console.warn('URL params error:', e);
   }
 
   var mediaRecorder = null;
@@ -339,10 +337,10 @@
       if (key) {
         localStorage.setItem('diary_gemini_api_key', key);
         keyStatus.textContent = '✅ API Key সংরক্ষণ করা হয়েছে';
-        setStatus('✅ Gemini API Key প্রস্তুত। এখন 🎙 চাপুন।');
+        setStatus('✅ Gemini API Key প্রস্তুত। এখন 🎙️ চাপুন।');
       } else {
         localStorage.removeItem('diary_gemini_api_key');
-        keyStatus.textContent = '⚠️️ API Key মুছে ফেলা হয়েছে';
+        keyStatus.textContent = '⚠️ API Key মুছে ফেলা হয়েছে';
         setStatus('⚠️ Gemini API Key দিন।');
       }
     } catch (e) {
@@ -408,7 +406,8 @@
       var msg = json && json.error && json.error.message ? String(json.error.message) : '';
       var err = new Error(msg || ('HTTP ' + response.status));
       err.status = response.status;
-      err.isOverloaded = response.status === 429 || response.status === 503 || msg.includes('high demand');
+      var lower = msg.toLowerCase();
+      err.isOverloaded = response.status === 429 || response.status === 503 || lower.indexOf('high demand') !== -1 || lower.indexOf('quota') !== -1;
       throw err;
     }
 
@@ -430,7 +429,7 @@
 
   async function transcribeWithGemini(audioBlob, mimeType) {
     var apiKey = getSavedApiKey();
-    if (!apiKey) throw new Error('Gemini API Key পাওয়া যায়নি। ⚙️ API মেনু থেকে Key দিন।');
+    if (!apiKey) throw new Error('Gemini API Key পাওয়া যায়নি। ⚙️️ API মেনু থেকে Key দিন।');
     if (!audioBlob || !audioBlob.size) throw new Error('কোনো অডিও পাওয়া যায়নি।');
     if (audioBlob.size > 14 * 1024 * 1024) throw new Error('রেকর্ডিংটি অনেক বড় হয়েছে। ছোট অংশে রেকর্ড করুন।');
 
@@ -446,19 +445,17 @@
 
     var lastError = null;
 
-    // পর্যায়ক্রমে মডেল পরিবর্তন ও স্বয়ংক্রিয় রিট্রাই মেকানিজম
     for (var m = 0; m < MODELS.length; m++) {
       var modelName = MODELS[m];
-      for (var attempt = 1; attempt <= 2; attempt++) {
+      for (var attempt = 1; attempt <= 3; attempt++) {
         try {
           var result = await callGeminiApi(modelName, apiKey, cleanMimeType, base64Audio, prompt);
           if (result) return result;
         } catch (err) {
           lastError = err;
-          // সার্ভারে চাপ থাকলে বা 429/503 হলে কিছুক্ষণ অপেক্ষা করে রিট্রাই করবে
-          if (err.isOverloaded && attempt === 1) {
-            setStatus('⏳ সার্ভারে চাপ বেশি, পুনরায় চেষ্টা চলছে...');
-            await sleep(1500);
+          if (err.isOverloaded && attempt < 3) {
+            setStatus('⏳ সার্ভারে চাপ বেশি (' + attempt + '/2), আবার চেষ্টা চলছে...');
+            await sleep(2000);
             continue;
           }
           break;
@@ -466,13 +463,15 @@
       }
     }
 
-    throw new Error(lastError && lastError.message ? lastError.message : 'সার্ভারে অতিরিক্ত চাপের কারণে লেখা তৈরি করা যায়নি। কিছুক্ষণ পর চেষ্টা করুন।');
+    throw new Error(lastError && lastError.message ? lastError.message : 'সার্ভারে অতিরিক্ত চাপের কারণে লেখা রূপান্তর করা যায়নি। কিছুক্ষণ পর চেষ্টা করুন।');
   }
 
   function stopTracks() {
     if (mediaStream) {
       try {
-        mediaStream.getTracks().forEach(function (track) { try { track.stop(); } catch (e) {} });
+        mediaStream.getTracks().forEach(function (track) {
+          try { track.stop(); } catch (e) {}
+        });
       } catch (e) {}
     }
     mediaStream = null;
@@ -648,4 +647,21 @@
   apiToggle.addEventListener('click', function (event) {
     event.preventDefault();
     event.stopPropagation();
-   
+    if (apiMenu.classList.contains('open')) closeApiMenu();
+    else openApiMenu();
+  });
+
+  apiMenu.addEventListener('click', function (event) { event.stopPropagation(); });
+  document.addEventListener('click', closeApiMenu);
+  window.addEventListener('beforeunload', stopTracks);
+
+  /* ===== Initial state ===== */
+  updateKeyStatus();
+  updateSendButton();
+  setStatus(getSavedApiKey()
+    ? '🔑 Gemini API প্রস্তুত। 🎙️ চাপ দিয়ে কথা বলা শুরু করুন।'
+    : '🎙️ শুরু করতে আগে ⚙️ API মেনু থেকে Gemini API Key দিন।');
+})();
+</script>
+</body>
+</html>
