@@ -148,6 +148,7 @@
       color: #5f6368;
       margin-bottom: 12px;
       line-height: 1.5;
+      padding: 0 10px;
     }
     textarea {
       width: 100%;
@@ -208,24 +209,18 @@
     <!-- উপরের ডান কোণে API dropdown -->
     <div class="topbar">
       <div class="api-dropdown">
-        <button id="apiToggle" class="api-toggle" type="button"
-                aria-expanded="false">⚙️ API ▾</button>
+        <button id="apiToggle" class="api-toggle" type="button" aria-expanded="false">⚙️ API ▾</button>
 
         <div id="apiMenu" class="api-menu">
           <div class="api-title">🤖 Gemini API Key</div>
 
           <div class="api-row">
-            <input id="apiKey" type="password" autocomplete="off"
-                   placeholder="AIzaSy... / AQ....">
-            <button class="save-key" id="saveKeyButton" type="button">
-              সংরক্ষণ
-            </button>
+            <input id="apiKey" type="password" autocomplete="off" placeholder="AIzaSy... / AQ....">
+            <button class="save-key" id="saveKeyButton" type="button">সংরক্ষণ</button>
           </div>
 
           <div class="key-note">
-            Gemini API Key এই browser-এর localStorage-এ রাখা হবে।
-            AIza... বা AQ... সহ বৈধ Gemini API Key ব্যবহার করা যাবে।
-            কোনো নির্দিষ্ট prefix বাধ্যতামূলক করা হয়নি।
+            Gemini API Key ব্রাউজারের localStorage-এ সংরক্ষিত থাকবে।
           </div>
 
           <div id="keyStatus" class="key-status"></div>
@@ -240,26 +235,20 @@
     </div>
 
     <div class="mic-wrap">
-      <button id="micButton" type="button"
-              aria-label="রেকর্ড শুরু/বন্ধ করুন">🎙️</button>
+      <button id="micButton" type="button" aria-label="রেকর্ড শুরু/বন্ধ করুন">🎙️</button>
     </div>
 
     <div id="status">🎙️ কথা রেকর্ড করতে মাইক্রোফোন চাপুন</div>
 
-    <textarea id="textOutput"
-      placeholder="আপনার বলা কথার পরিষ্কার বাংলা লেখা এখানে আসবে। এখানে চাইলে এডিট করতে পারবেন..."></textarea>
+    <textarea id="textOutput" placeholder="আপনার বলা কথার পরিষ্কার বাংলা লেখা এখানে আসবে। এখানে চাইলে এডিট করতে পারবেন..."></textarea>
 
     <div class="buttons">
       <button class="action" id="clearButton" type="button">🗑️ পরিষ্কার</button>
-      <button class="action" id="submitButton" type="button" disabled>
-        📔 ডায়েরিতে পাঠান
-      </button>
+      <button class="action" id="submitButton" type="button" disabled>📔 ডায়েরিতে পাঠান</button>
     </div>
 
     <div class="info">
-      রেকর্ডিং বন্ধ করলে অডিও Gemini-তে পাঠিয়ে বাংলা transcript তৈরি হবে।
-      তারপর এই লেখাটি আপনি নিজের মতো করে সম্পাদনা করতে পারবেন। সব ঠিক হলে
-      <b>📔 ডায়েরিতে পাঠান</b> চাপলে মূল ডায়েরিতে লেখা যাবে।
+      রেকর্ডিং বন্ধ করলে অডিও Gemini-তে পাঠিয়ে বাংলা transcript তৈরি হবে। তারপর এই লেখাটি আপনি নিজের মতো করে সম্পাদনা করতে পারবেন। সব ঠিক হলে <b>📔 ডায়েরিতে পাঠান</b> চাপলে মূল ডায়েরিতে লেখা জমা হবে।
     </div>
   </div>
 
@@ -267,8 +256,8 @@
 (function () {
   'use strict';
 
-  /* ===== Configuration ===== */
-  var MODEL = 'gemini-2.5-flash';
+  /* ===== Configuration (Updated Model) ===== */
+  var MODEL = 'gemini-3.8-flash'; //[span_0](start_span)[span_0](end_span)
   var GEMINI_ENDPOINT = 'https://generativelanguage.googleapis.com/v1beta/models/' + MODEL + ':generateContent';
 
   /* ===== Safe element lookup ===== */
@@ -285,7 +274,6 @@
   var saveKeyButton = $('saveKeyButton');
   var keyStatus = $('keyStatus');
 
-  /* If the HTML was loaded incorrectly, show the problem instead of silently failing. */
   if (!micButton || !statusEl || !textOutput || !clearButton || !submitButton ||
       !apiToggle || !apiMenu || !apiKeyInput || !saveKeyButton || !keyStatus) {
     console.error('Voice Diary: required HTML elements are missing.');
@@ -352,7 +340,7 @@
       if (key) {
         localStorage.setItem('diary_gemini_api_key', key);
         keyStatus.textContent = '✅ API Key সংরক্ষণ করা হয়েছে';
-        setStatus('✅ Gemini API Key প্রস্তুত। এখন 🎙️ চাপুন।');
+        setStatus('✅ Gemini API Key প্রস্তুত। এখন 🎙 চাপুন।');
       } else {
         localStorage.removeItem('diary_gemini_api_key');
         keyStatus.textContent = '⚠️ API Key মুছে ফেলা হয়েছে';
@@ -395,15 +383,15 @@
     if (!audioBlob || !audioBlob.size) throw new Error('কোনো অডিও পাওয়া যায়নি।');
     if (audioBlob.size > 14 * 1024 * 1024) throw new Error('রেকর্ডিংটি অনেক বড় হয়েছে। ছোট অংশে রেকর্ড করুন।');
 
+    var cleanMimeType = (mimeType || 'audio/webm').split(';')[0];
     var base64Audio = await blobToBase64(audioBlob);
     var prompt =
-      'এই অডিওতে একজন ব্যক্তি বাংলা ভাষায় কথা বলেছেন। অডিওটি মনোযোগ দিয়ে শুনে তিনি যা বলেছেন তা বাংলায় লিখে দিন।\n\n' +
+      'এই অডিওতে একজন ব্যক্তি বাংলা ভাষায় কথা বলেছেন। অডিওটি মনোযোগ দিয়ে শুনে তিনি যা বলেছেন তা হুবহু পরিষ্কার বাংলায় লিখে দিন।\n\n' +
       'নিয়ম:\n' +
-      '১. বক্তার অর্থ পরিবর্তন করবেন না।\n' +
-      '২. নিজের পক্ষ থেকে কোনো তথ্য যোগ করবেন না।\n' +
-      '৩. শোনা যায় না এমন শব্দ অনুমান করে লিখবেন না।\n' +
-      '৪. বাংলা বানান ও যতিচিহ্ন যথাসম্ভব শুদ্ধ করুন।\n' +
-      '৫. শুধু চূড়ান্ত transcript দিন; কোনো ব্যাখ্যা বা শিরোনাম নয়।';
+      '১. বক্তার মূল বক্তব্যের কোনো অর্থ পরিবর্তন করবেন না।\n' +
+      '২. নিজের পক্ষ থেকে কোনো উত্তর বা অতিরিক্ত তথ্য যোগ করবেন না।\n' +
+      '৩. বাংলা বানান ও যতিচিহ্ন শুদ্ধ রাখুন।\n' +
+      '৪. শুধু চূড়ান্ত transcript দিন; কোনো ভূমিকা বা নোট লিখবেন না।';
 
     var response;
     try {
@@ -418,14 +406,14 @@
             role: 'user',
             parts: [
               { text: prompt },
-              { inlineData: { mimeType: mimeType || 'audio/webm', data: base64Audio } }
+              { inlineData: { mimeType: cleanMimeType, data: base64Audio } }
             ]
           }],
           generationConfig: { temperature: 0.1 }
         })
       });
     } catch (networkError) {
-      throw new Error('Gemini-তে সংযোগ করা যাচ্ছে না। Internet connection ও API Key পরীক্ষা করুন।');
+      throw new Error('Gemini সার্ভারে সংযোগ করা যায়নি। ইন্টারনেট সংযোগ পরীক্ষা করুন।');
     }
 
     var raw = await response.text();
@@ -434,10 +422,7 @@
 
     if (!response.ok) {
       var msg = json && json.error && json.error.message ? String(json.error.message) : '';
-      if (response.status === 400) throw new Error(msg || 'Gemini request গ্রহণ করেনি। Audio format বা API Key পরীক্ষা করুন।');
-      if (response.status === 401 || response.status === 403) throw new Error(msg || 'Gemini API Key বৈধ নয় বা API ব্যবহারের অনুমতি নেই।');
-      if (response.status === 429) throw new Error(msg || 'Gemini rate limit পূরণ হয়েছে। কিছুক্ষণ পরে আবার চেষ্টা করুন।');
-      throw new Error(msg || ('Gemini API error: HTTP ' + response.status));
+      throw new Error(msg || ('Gemini ত্রুটি: HTTP ' + response.status));
     }
 
     var resultText = '';
@@ -455,7 +440,7 @@
       .replace(/\s*```\s*$/i, '')
       .trim();
 
-    if (!resultText) throw new Error('Gemini কোনো transcript ফেরত দেয়নি।');
+    if (!resultText) throw new Error('কোনো লেখা রূপান্তর করা সম্ভব হয়নি।');
     return resultText;
   }
 
@@ -487,11 +472,7 @@
     }
 
     if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-      setStatus('❌ এই browser/page context-এ microphone ব্যবহার করা যাচ্ছে না। HTTPS URL দিয়ে খুলুন।');
-      return;
-    }
-    if (!window.MediaRecorder) {
-      setStatus('❌ এই browser-এ MediaRecorder সমর্থিত নয়। Chrome/Edge-এর সর্বশেষ সংস্করণ ব্যবহার করুন।');
+      setStatus('❌ এই ব্রাউজারে মাইক্রোফোন সাপোর্ট নেই বা HTTPS সংযোগ নেই।');
       return;
     }
 
@@ -533,14 +514,14 @@
         if (!audioBlob.size) {
           isProcessing = false;
           resetMicButton();
-          setStatus('⚠️ কোনো অডিও পাওয়া যায়নি। আবার চেষ্টা করুন।');
+          setStatus('⚠️ কোনো অডিও রেকর্ড হয়নি। আবার চেষ্টা করুন।');
           return;
         }
 
         isProcessing = true;
         micButton.disabled = true;
         updateSendButton();
-        setStatus('🤖 Gemini অডিও শুনে বাংলা লেখা তৈরি করছে...');
+        setStatus('🤖 Gemini অডিও শুনে লেখা তৈরি করছে...');
 
         try {
           var transcript = await transcribeWithGemini(audioBlob, finalType);
@@ -561,7 +542,7 @@
         isRecording = true;
         micButton.classList.add('recording');
         micButton.textContent = '⏹️';
-        setStatus('🔴 রেকর্ড হচ্ছে... শেষ হলে ⏹️ চাপুন।');
+        setStatus('🔴 রেকর্ড হচ্ছে... কথা শেষ হলে ⏹️ চাপুন।');
         updateSendButton();
       } catch (e) {
         console.error(e);
@@ -574,10 +555,7 @@
       console.error(error);
       resetMicButton();
       var message = '❌ Microphone চালু করা যায়নি।';
-      if (error && error.name === 'NotAllowedError') message = '⚠️ Microphone permission Allow করুন।';
-      else if (error && error.name === 'NotFoundError') message = '⚠️ কোনো microphone পাওয়া যায়নি।';
-      else if (error && error.name === 'NotReadableError') message = '⚠️ Microphone অন্য কোনো app ব্যবহার করছে।';
-      else if (error && error.name === 'SecurityError') message = '❌ Microphone ব্যবহারের জন্য HTTPS প্রয়োজন।';
+      if (error && error.name === 'NotAllowedError') message = '⚠️️ Microphone অনুমতি (Permission) Allow করুন।';
       setStatus(message);
     });
   }
@@ -605,9 +583,9 @@
   function submitToDiary() {
     var text = String(textOutput.value || '').trim();
     if (!text) return setStatus('⚠️ ডায়েরিতে পাঠানোর মতো কোনো লেখা নেই।');
-    if (!parentOrigin) return setStatus('❌ মূল ডায়েরির parentOrigin পাওয়া যায়নি। Voice Helper-টি মূল ডায়েরি থেকে খুলুন।');
-    if (!token) return setStatus('❌ Voice session token পাওয়া যায়নি। Voice Helper-টি মূল ডায়েরি থেকে খুলুন।');
-    if (!window.opener || window.opener.closed) return setStatus('❌ মূল ডায়েরির উইন্ডো পাওয়া যাচ্ছে না। Helper-টি মূল ডায়েরি থেকে খুলুন।');
+    if (!parentOrigin) return setStatus('❌ মূল ডায়েরির parentOrigin পাওয়া যায়নি। Helper উইন্ডো থেকে ডায়েরি খুলুন।');
+    if (!token) return setStatus('❌ Voice session token পাওয়া যায়নি।');
+    if (!window.opener || window.opener.closed) return setStatus('❌ মূল ডায়েরির উইন্ডো খুঁজে পাওয়া যাচ্ছে না।');
 
     try {
       window.opener.postMessage({ type: 'DIARY_VOICE_TRANSCRIPT', token: token, text: text }, parentOrigin);
@@ -656,7 +634,7 @@
   /* ===== Global error visibility ===== */
   window.addEventListener('error', function (event) {
     console.error('Voice Diary JS error:', event.error || event.message);
-    if (!isProcessing) setStatus('❌ JavaScript error হয়েছে। Page reload করে আবার চেষ্টা করুন।');
+    if (!isProcessing) setStatus('❌ কোনো সমস্যা হয়েছে। পেজ রিফ্রেশ করে আবার চেষ্টা করুন।');
   });
 
   /* ===== Initial state ===== */
