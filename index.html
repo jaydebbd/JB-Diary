@@ -78,7 +78,7 @@
   <div class="card">
     <h2>🎙️ ভয়েস রেকর্ডার</h2>
     <div class="desc">
-      কথা বলতে মাইকে চাপ দিন → কথা শেষ হলে আবার চাপুন। অডিও স্বয়ংক্রিয়ভাবে বাংলায় রূপান্তর হয়ে ডায়েরিতে জমা হবে।
+      কথা বলতে মাইকে চাপ দিন → কথা শেষ হলে আবার চাপুন। লেখা স্বয়ংক্রিয়ভাবে ডায়েরিতে চলে যাবে।
     </div>
 
     <div class="mic-wrap">
@@ -92,13 +92,11 @@
 (function () {
   'use strict';
 
-  var MODEL = 'gemini-3.8-flash';
-  var GEMINI_ENDPOINT = 'https://generativelanguage.googleapis.com/v1beta/models/' + MODEL + ':generateContent';
+  var MODELS = ['gemini-3.8-flash'];
 
   var micButton = document.getElementById('micButton');
   var statusEl = document.getElementById('status');
 
-  // URL প্যারামিটার থেকে টোকেন, অরিজিন ও ডায়েরির API Key রিড করা
   var token = '';
   var parentOrigin = '';
   var diaryApiKey = '';
@@ -119,6 +117,10 @@
     statusEl.textContent = msg;
   }
 
+  function sleep(ms) {
+    return new Promise(function(resolve) { setTimeout(resolve, ms); });
+  }
+
   function blobToBase64(blob) {
     return new Promise(function (resolve, reject) {
       var reader = new FileReader();
@@ -135,7 +137,7 @@
 
   async function transcribeWithGemini(audioBlob, mimeType) {
     if (!diaryApiKey) {
-      throw new Error('ডায়েরিতে Gemini API Key সেট করা নেই! মূল ডায়েরির মেনু থেকে Key দিন।');
+      throw new Error('ডায়েরিতে Gemini API Key সেট করা নেই!');
     }
     var base64Audio = await blobToBase64(audioBlob);
     var cleanMime = (mimeType || 'audio/webm').split(';')[0];
@@ -143,37 +145,65 @@
       'এই অডিওতে একজন ব্যক্তি বাংলা ভাষায় কথা বলেছেন। অডিওটি মনোযোগ দিয়ে শুনে তিনি যা বলেছেন তা হুবহু পরিষ্কার ও সঠিক যতিচিহ্নসহ বাংলায় লিখে দিন।\n\n' +
       'নিয়ম:\n' +
       '১. বক্তার মূল বক্তব্য হুবহু রাখবেন।\n' +
-      '২. কোনো ভূমিকা বা অতিরিক্ত ব্যাখ্যা লিখবেন না, শুধু চূড়ান্ত বাংলা লেখাটি দিন।';
+      '২. কোনো ভূমিকা বা ব্যাখ্যা লিখবেন না, শুধু চূড়ান্ত বাংলা লেখাটি দিন।';
 
-    var response = await fetch(GEMINI_ENDPOINT, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-goog-api-key': diaryApiKey
-      },
-      body: JSON.stringify({
-        contents: [{
-          role: 'user',
-          parts: [
-            { text: prompt },
-            { inlineData: { mimeType: cleanMime, data: base64Audio } }
-          ]
-        }],
-        generationConfig: { temperature: 0.1 }
-      })
-    });
+    var lastError = null;
 
-    var json = await response.json();
-    if (!response.ok) {
-      throw new Error(json.error && json.error.message ? json.error.message : ('HTTP ' + response.status));
+    for (var m = 0; m < MODELS.length; m++) {
+      var modelName = MODELS[m];
+      var endpoint = 'https://generativelanguage.googleapis.com/v1beta/models/' + modelName + ':generateContent';
+
+      for (var attempt = 1; attempt <= 3; attempt++) {
+        try {
+          var response = await fetch(endpoint, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'x-goog-api-key': diaryApiKey
+            },
+            body: JSON.stringify({
+              contents: [{
+                role: 'user',
+                parts: [
+                  { text: prompt },
+                  { inlineData: { mimeType: cleanMime, data: base64Audio } }
+                ]
+              }],
+              generationConfig: { temperature: 0.1 }
+            })
+          });
+
+          var json = await response.json();
+          if (!response.ok) {
+            var msg = (json && json.error && json.error.message) ? json.error.message : ('HTTP ' + response.status);
+            var err = new Error(msg);
+            if (response.status === 429 || response.status === 503 || msg.toLowerCase().indexOf('high demand') !== -1) {
+              if (attempt < 3) {
+                setStatus('⏳ সার্ভারে চাপ বেশি (' + attempt + '/2), অপেক্ষা করে আবার চেষ্টা হচ্ছে...');
+                await sleep(1500);
+                continue;
+              }
+            }
+            throw err;
+          }
+
+          var candidates = json.candidates || [];
+          if (candidates.length && candidates[0].content && candidates[0].content.parts) {
+            var text = candidates[0].content.parts[0].text || '';
+            return text.replace(/^\s*```(?:text|plaintext|markdown)?\s*/i, '').replace(/\s*```\s*$/i, '').trim();
+          }
+          return '';
+        } catch (e) {
+          lastError = e;
+          if (attempt < 3 && e.message && e.message.toLowerCase().indexOf('high demand') !== -1) {
+            await sleep(1500);
+            continue;
+          }
+          break;
+        }
+      }
     }
-
-    var candidates = json.candidates || [];
-    if (candidates.length && candidates[0].content && candidates[0].content.parts) {
-      var text = candidates[0].content.parts[0].text || '';
-      return text.replace(/^\s*```(?:text|plaintext|markdown)?\s*/i, '').replace(/\s*```\s*$/i, '').trim();
-    }
-    return '';
+    throw lastError || new Error('অডিও থেকে লেখা রূপান্তর করা যায়নি।');
   }
 
   function stopTracks() {
@@ -292,14 +322,9 @@
   if (!diaryApiKey) {
     setStatus('⚠️ মূল ডায়েরির মেনু থেকে আগে API Key দিন!');
   } else {
-    // উইন্ডো খোলার সাথে সাথে স্বয়ংক্রিয়ভাবে রেকর্ডিং শুরু করতে চাইলে সরাসরি startRecording() কল করতে পারেন
     setStatus('কথা বলতে মাইকে চাপ দিন');
   }
 })();
 </script>
 </body>
 </html>
-
-
-
-
