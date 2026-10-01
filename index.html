@@ -256,9 +256,8 @@
 (function () {
   'use strict';
 
-  /* ===== Configuration (Updated Model) ===== */
-  var MODEL = 'gemini-3.8-flash'; //[span_0](start_span)[span_0](end_span)
-  var GEMINI_ENDPOINT = 'https://generativelanguage.googleapis.com/v1beta/models/' + MODEL + ':generateContent';
+  /* ===== Models List with Automatic Fallback ===== */
+  var MODELS = ['gemini-2.5-flash', 'gemini-2.5-flash-lite', 'gemini-1.5-flash'];
 
   /* ===== Safe element lookup ===== */
   function $(id) { return document.getElementById(id); }
@@ -343,7 +342,7 @@
         setStatus('✅ Gemini API Key প্রস্তুত। এখন 🎙 চাপুন।');
       } else {
         localStorage.removeItem('diary_gemini_api_key');
-        keyStatus.textContent = '⚠️ API Key মুছে ফেলা হয়েছে';
+        keyStatus.textContent = '⚠️️ API Key মুছে ফেলা হয়েছে';
         setStatus('⚠️ Gemini API Key দিন।');
       }
     } catch (e) {
@@ -377,6 +376,58 @@
     });
   }
 
+  function sleep(ms) {
+    return new Promise(function (resolve) { setTimeout(resolve, ms); });
+  }
+
+  async function callGeminiApi(modelName, apiKey, cleanMimeType, base64Audio, prompt) {
+    var endpoint = 'https://generativelanguage.googleapis.com/v1beta/models/' + modelName + ':generateContent';
+    var response = await fetch(endpoint, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-goog-api-key': apiKey
+      },
+      body: JSON.stringify({
+        contents: [{
+          role: 'user',
+          parts: [
+            { text: prompt },
+            { inlineData: { mimeType: cleanMimeType, data: base64Audio } }
+          ]
+        }],
+        generationConfig: { temperature: 0.1 }
+      })
+    });
+
+    var raw = await response.text();
+    var json = null;
+    try { json = JSON.parse(raw); } catch (e) {}
+
+    if (!response.ok) {
+      var msg = json && json.error && json.error.message ? String(json.error.message) : '';
+      var err = new Error(msg || ('HTTP ' + response.status));
+      err.status = response.status;
+      err.isOverloaded = response.status === 429 || response.status === 503 || msg.includes('high demand');
+      throw err;
+    }
+
+    var resultText = '';
+    var candidates = (json && json.candidates) || [];
+    for (var i = 0; i < candidates.length; i++) {
+      var parts = candidates[i].content && candidates[i].content.parts ? candidates[i].content.parts : [];
+      for (var j = 0; j < parts.length; j++) {
+        if (parts[j].text) resultText += String(parts[j].text);
+      }
+      if (resultText.trim()) break;
+    }
+
+    return resultText
+      .replace(/^\s*```(?:text|plaintext|markdown)?\s*/i, '')
+      .replace(/\s*```\s*$/i, '')
+      .trim();
+  }
+
   async function transcribeWithGemini(audioBlob, mimeType) {
     var apiKey = getSavedApiKey();
     if (!apiKey) throw new Error('Gemini API Key পাওয়া যায়নি। ⚙️ API মেনু থেকে Key দিন।');
@@ -393,55 +444,29 @@
       '৩. বাংলা বানান ও যতিচিহ্ন শুদ্ধ রাখুন।\n' +
       '৪. শুধু চূড়ান্ত transcript দিন; কোনো ভূমিকা বা নোট লিখবেন না।';
 
-    var response;
-    try {
-      response = await fetch(GEMINI_ENDPOINT, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-goog-api-key': apiKey
-        },
-        body: JSON.stringify({
-          contents: [{
-            role: 'user',
-            parts: [
-              { text: prompt },
-              { inlineData: { mimeType: cleanMimeType, data: base64Audio } }
-            ]
-          }],
-          generationConfig: { temperature: 0.1 }
-        })
-      });
-    } catch (networkError) {
-      throw new Error('Gemini সার্ভারে সংযোগ করা যায়নি। ইন্টারনেট সংযোগ পরীক্ষা করুন।');
-    }
+    var lastError = null;
 
-    var raw = await response.text();
-    var json = null;
-    try { json = JSON.parse(raw); } catch (e) {}
-
-    if (!response.ok) {
-      var msg = json && json.error && json.error.message ? String(json.error.message) : '';
-      throw new Error(msg || ('Gemini ত্রুটি: HTTP ' + response.status));
-    }
-
-    var resultText = '';
-    var candidates = (json && json.candidates) || [];
-    for (var i = 0; i < candidates.length; i++) {
-      var parts = candidates[i].content && candidates[i].content.parts ? candidates[i].content.parts : [];
-      for (var j = 0; j < parts.length; j++) {
-        if (parts[j].text) resultText += String(parts[j].text);
+    // পর্যায়ক্রমে মডেল পরিবর্তন ও স্বয়ংক্রিয় রিট্রাই মেকানিজম
+    for (var m = 0; m < MODELS.length; m++) {
+      var modelName = MODELS[m];
+      for (var attempt = 1; attempt <= 2; attempt++) {
+        try {
+          var result = await callGeminiApi(modelName, apiKey, cleanMimeType, base64Audio, prompt);
+          if (result) return result;
+        } catch (err) {
+          lastError = err;
+          // সার্ভারে চাপ থাকলে বা 429/503 হলে কিছুক্ষণ অপেক্ষা করে রিট্রাই করবে
+          if (err.isOverloaded && attempt === 1) {
+            setStatus('⏳ সার্ভারে চাপ বেশি, পুনরায় চেষ্টা চলছে...');
+            await sleep(1500);
+            continue;
+          }
+          break;
+        }
       }
-      if (resultText.trim()) break;
     }
 
-    resultText = resultText
-      .replace(/^\s*```(?:text|plaintext|markdown)?\s*/i, '')
-      .replace(/\s*```\s*$/i, '')
-      .trim();
-
-    if (!resultText) throw new Error('কোনো লেখা রূপান্তর করা সম্ভব হয়নি।');
-    return resultText;
+    throw new Error(lastError && lastError.message ? lastError.message : 'সার্ভারে অতিরিক্ত চাপের কারণে লেখা তৈরি করা যায়নি। কিছুক্ষণ পর চেষ্টা করুন।');
   }
 
   function stopTracks() {
@@ -555,7 +580,7 @@
       console.error(error);
       resetMicButton();
       var message = '❌ Microphone চালু করা যায়নি।';
-      if (error && error.name === 'NotAllowedError') message = '⚠️️ Microphone অনুমতি (Permission) Allow করুন।';
+      if (error && error.name === 'NotAllowedError') message = '⚠️ Microphone অনুমতি (Permission) Allow করুন।';
       setStatus(message);
     });
   }
@@ -623,27 +648,4 @@
   apiToggle.addEventListener('click', function (event) {
     event.preventDefault();
     event.stopPropagation();
-    if (apiMenu.classList.contains('open')) closeApiMenu();
-    else openApiMenu();
-  });
-
-  apiMenu.addEventListener('click', function (event) { event.stopPropagation(); });
-  document.addEventListener('click', closeApiMenu);
-  window.addEventListener('beforeunload', stopTracks);
-
-  /* ===== Global error visibility ===== */
-  window.addEventListener('error', function (event) {
-    console.error('Voice Diary JS error:', event.error || event.message);
-    if (!isProcessing) setStatus('❌ কোনো সমস্যা হয়েছে। পেজ রিফ্রেশ করে আবার চেষ্টা করুন।');
-  });
-
-  /* ===== Initial state ===== */
-  updateKeyStatus();
-  updateSendButton();
-  setStatus(getSavedApiKey()
-    ? '🔑 Gemini API প্রস্তুত। 🎙️ চাপ দিয়ে কথা বলা শুরু করুন।'
-    : '🎙️ শুরু করতে আগে ⚙️ API মেনু থেকে Gemini API Key দিন।');
-})();
-</script>
-</body>
-</html>
+   
