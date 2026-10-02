@@ -96,10 +96,10 @@ button:disabled{opacity:.55;cursor:not-allowed}
 'use strict';
 
 var $=function(id){return document.getElementById(id);};
-var micButton=('micButton'),statusEl=('status'),textOutput=$('textOutput');
-var clearButton=('clearButton'),submitButton=('submitButton');
-var apiToggle=('apiToggle'),apiMenu=('apiMenu'),apiKeyInput=('apiKey'),saveKeyButton=('saveKeyButton'),keyStatus=$('keyStatus');
-var browserMode=('browserMode'),geminiMode=('geminiMode'),fileButton=('fileButton'),audioFile=('audioFile'),browserTestButton=$('browserTestButton');
+var micButton=$('micButton'),statusEl=$('status'),textOutput=$('textOutput');
+var clearButton=$('clearButton'),submitButton=$('submitButton');
+var apiToggle=$('apiToggle'),apiMenu=$('apiMenu'),apiKeyInput=$('apiKey'),saveKeyButton=$('saveKeyButton'),keyStatus=$('keyStatus');
+var browserMode=$('browserMode'),geminiMode=$('geminiMode'),fileButton=$('fileButton'),audioFile=$('audioFile'),browserTestButton=$('browserTestButton');
 
 var token='',parentOrigin='';
 try{
@@ -461,5 +461,3 @@ setStatus(browserSupported?'🎙️ কথা রেকর্ড করতে �
 </script>
 </body>
 </html>
-
-
