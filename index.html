@@ -1,0 +1,1940 @@
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>আমার অনলাইন ডায়েরি</title>
+<link rel="icon" type="image/png" href="https://fonts.gstatic.com/s/e/notoemoji/latest/1f4d3/512.png">
+<meta name="theme-color" content="#1a73e8">
+<style>
+:root {
+  --primary: #1a73e8;
+  --bg: #f4f6f9;
+  --card-bg: #fffdf9;
+  --text: #2c3e50;
+  --border-color: #8c7355;
+  --danger: #d93025;
+  --success: #1e8e3e;
+  --offline: #e37400;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; -webkit-tap-highlight-color: transparent; }
+body { background-color: var(--bg); color: var(--text); padding-bottom: 85px; width: 100%; min-height: 100vh; }
+.header { background: linear-gradient(135deg, #1a73e8, #0d47a1); color: white; padding: 12px; text-align: center; box-shadow: 0 2px 6px rgba(0,0,0,0.15); width: 100%; }
+.header h1 { font-size: 19px; font-weight: 600; }
+.save-status-bar {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 5px;
+  padding: 3px 12px;
+  border-radius: 16px;
+  font-size: 11.5px;
+  font-weight: 500;
+  background: rgba(255, 255, 255, 0.2);
+  color: #fff;
+  transition: all 0.3s;
+}
+.container { width: 100%; max-width: 100%; padding: 10px 14px; }
+.portal-container { max-width: 500px; margin: 25px auto; padding: 12px; }
+.portal-nav-bar { display: flex; justify-content: center; gap: 10px; margin-bottom: 18px; }
+.btn-portal-tab {
+  flex: 1;
+  padding: 13px 8px;
+  font-size: 15px;
+  font-weight: 600;
+  border: 1.5px solid #d2e3fc;
+  border-radius: 10px;
+  background: white;
+  color: #333;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.05);
+  transition: all 0.2s;
+}
+.btn-portal-tab.active {
+  border-color: #1a73e8;
+  background: #eef3fc;
+  color: #1a73e8;
+  box-shadow: 0 2px 7px rgba(26,115,232,0.2);
+}
+.portal-card {
+  background: white;
+  border-radius: 12px;
+  padding: 18px 14px;
+  border: 1px solid #e1e7f0;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+  min-height: 180px;
+}
+.portal-empty-box { text-align: center; padding: 30px 10px; color: #777; }
+.portal-item-btn {
+  width: 100%;
+  text-align: left;
+  padding: 12px 14px;
+  margin-bottom: 9px;
+  background: #f8fbff;
+  border: 1px solid #d2e3fc;
+  border-radius: 8px;
+  font-size: 15px;
+  font-weight: 600;
+  color: #2c3e50;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.portal-item-btn:hover { background: #eef3fc; border-color: #1a73e8; }
+.btn-create-portal-only {
+  width: 100%;
+  margin-top: 14px;
+  padding: 11px;
+  background: linear-gradient(135deg, #1e8e3e, #137333);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  box-shadow: 0 2px 6px rgba(30,142,62,0.3);
+}
+.btn-portal-lock {
+  margin-top: 12px;
+  width: 100%;
+  padding: 10px;
+  background: #fff8f7;
+  color: #d93025;
+  border: 1px solid #fce8e6;
+  border-radius: 8px;
+  font-size: 13.5px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.diary-bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 10px;
+  background: white;
+  padding: 7px 10px;
+  border-radius: 10px;
+  border: 1px solid #d2e3fc;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.04);
+}
+.btn-diary-toggle {
+  background: #eef3fc;
+  color: #1a73e8;
+  border: 1px solid #cce0ff;
+  border-radius: 8px;
+  padding: 7px 12px;
+  font-size: 13.5px;
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+.btn-create-diary {
+  background: #f1f8e9;
+  color: var(--success);
+  border: 1px solid #c8e6c9;
+  border-radius: 8px;
+  padding: 7px 12px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.action-bar { display: flex; justify-content: space-between; align-items: center; gap: 8px; margin-bottom: 12px; position: relative; }
+.btn-dropdown-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 10px 12px;
+  background: white;
+  color: #333;
+  border: 1.5px solid #ccc;
+  border-radius: 9px;
+  font-size: 13.5px;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.btn-write {
+  flex: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 10px 12px;
+  background: linear-gradient(135deg, #1a73e8, #1557b0);
+  color: white;
+  border: none;
+  border-radius: 9px;
+  font-size: 14.5px;
+  font-weight: 600;
+  cursor: pointer;
+  box-shadow: 0 3px 6px rgba(26,115,232,0.3);
+  white-space: nowrap;
+}
+.dropdown { position: relative; display: inline-block; }
+.dropdown-menu {
+  display: none;
+  position: absolute;
+  top: 115%;
+  background: white;
+  min-width: 255px;
+  box-shadow: 0 6px 22px rgba(0,0,0,0.18);
+  border-radius: 9px;
+  border: 1px solid #ddd;
+  z-index: 1000;
+  overflow: hidden;
+}
+.dropdown-menu.menu-left { left: 0; max-height: 70vh; overflow-y: auto; }
+.dropdown-menu.menu-right { right: 0; min-width: 235px; }
+.dropdown-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  padding: 11px 14px;
+  border: none;
+  background: none;
+  text-align: left;
+  font-size: 13.5px;
+  color: #333;
+  cursor: pointer;
+  border-bottom: 1px solid #f0f0f0;
+  text-decoration: none;
+}
+.dropdown-item:last-child { border-bottom: none; }
+.dropdown-item:active { background-color: #e8f0fe; color: #1a73e8; }
+.dropdown-item.item-active { background-color: #e8f0fe; color: #1a73e8; font-weight: 600; }
+.dropdown-item.item-delete { color: var(--danger); font-weight: 500; }
+.dropdown-item.item-lock { color: #d93025; font-weight: 600; background: #fff8f7; }
+.section-header {
+  background: #f8f9fa;
+  color: #555;
+  font-size: 12px;
+  font-weight: 700;
+  padding: 6px 14px;
+  border-bottom: 1px solid #e9ecef;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+.month-header {
+  background: #f1f4f8;
+  color: #1a73e8;
+  font-size: 13px;
+  font-weight: 700;
+  padding: 8px 14px;
+  border-bottom: 1px solid #e2e8f0;
+}
+.badge-count {
+  font-size: 11px;
+  background: #eef2f7;
+  color: #666;
+  padding: 2px 7px;
+  border-radius: 12px;
+}
+.active-date-banner {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: #fff;
+  border: 1px solid #d2e3fc;
+  border-left: 4px solid #1a73e8;
+  border-radius: 8px;
+  padding: 9px 12px;
+  margin-bottom: 16px;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.04);
+}
+.active-date-text { font-size: 13.5px; color: #1a73e8; font-weight: 600; }
+.btn-return-today {
+  background: #eef3fc;
+  color: #1a73e8;
+  border: 1px solid #cce0ff;
+  border-radius: 6px;
+  padding: 4px 9px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+/* AI Auto-Refine Switch Banner */
+.ai-switch-banner {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: #fdfbff;
+  border: 1px solid #e9d8fd;
+  border-radius: 9px;
+  padding: 8px 12px;
+  margin-bottom: 14px;
+}
+.switch-label-wrap { display: flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 600; color: #6a1b9a; }
+.toggle-switch { position: relative; display: inline-block; width: 44px; height: 24px; margin: 0; }
+.toggle-switch input { opacity: 0; width: 0; height: 0; }
+.toggle-slider {
+  position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0;
+  background-color: #ccc; transition: .3s; border-radius: 24px;
+}
+.toggle-slider:before {
+  position: absolute; content: ""; height: 18px; width: 18px; left: 3px; bottom: 3px;
+  background-color: white; transition: .3s; border-radius: 50%;
+}
+input:checked + .toggle-slider { background-color: #6a1b9a; }
+input:checked + .toggle-slider:before { transform: translateX(20px); }
+
+.diary-page {
+  background: var(--card-bg);
+  border-radius: 8px;
+  border: 3px double var(--border-color);
+  padding: 16px 16px;
+  margin-bottom: 22px;
+  box-shadow: 0 3px 10px rgba(0,0,0,0.06);
+  position: relative;
+}
+.diary-page::before {
+  content: "";
+  position: absolute;
+  top: 4px; left: 4px; right: 4px; bottom: 4px;
+  border: 1px solid rgba(140, 115, 85, 0.25);
+  pointer-events: none;
+  border-radius: 5px;
+}
+.page-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-bottom: 8px;
+  border-bottom: 1.5px solid rgba(140, 115, 85, 0.3);
+  margin-bottom: 12px;
+}
+.page-number-badge {
+  background: #8c7355;
+  color: white;
+  padding: 3px 10px;
+  border-radius: 16px;
+  font-size: 13px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+.entry-timestamp { color: #1a73e8; font-size: 13.5px; font-weight: 600; }
+.diary-content {
+  font-size: 16px;
+  line-height: 1.7;
+  min-height: 480px;
+  outline: none;
+  color: #2c3e50;
+  white-space: pre-wrap;
+  word-break: break-word;
+  padding: 6px 2px;
+  border-bottom: 1px dashed rgba(140, 115, 85, 0.2);
+}
+.diary-content:empty:before {
+  content: "এখানে আপনার ডায়েরির পাতা লিখুন... (পাতা পূর্ণ হলে পরবর্তী পাতা তৈরি হবে)";
+  color: #999;
+}
+.photo-grid { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 14px; }
+.photo-item { position: relative; width: 100%; max-width: 280px; border-radius: 6px; overflow: hidden; border: 1px solid #ddd; }
+.photo-item img { width: 100%; height: auto; display: block; }
+.photo-del { position: absolute; top: 6px; right: 6px; background: rgba(0,0,0,0.7); color: white; border: none; border-radius: 50%; width: 28px; height: 28px; cursor: pointer; font-size: 14px; }
+.page-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 14px;
+  padding-top: 10px;
+  border-top: 1px dashed rgba(140, 115, 85, 0.3);
+}
+.page-footer-left { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.btn-save-page {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  background: linear-gradient(135deg, #1e8e3e, #137333);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  padding: 7px 14px;
+  font-size: 13.5px;
+  font-weight: 600;
+  cursor: pointer;
+  box-shadow: 0 2px 5px rgba(30,142,62,0.3);
+  transition: all 0.2s;
+}
+.btn-save-page:active { transform: scale(0.96); background: #137333; }
+.btn-ai-refine {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  background: #f3e8fd;
+  color: #6a1b9a;
+  border: 1px solid #d1c4e9;
+  border-radius: 8px;
+  padding: 7px 12px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.btn-ai-refine:active { background: #e1bee7; }
+.btn-photo {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  background: #eef3fc;
+  color: #1a73e8;
+  border: 1px solid #cce0ff;
+  border-radius: 8px;
+  padding: 6px 12px;
+  font-size: 13px;
+  cursor: pointer;
+}
+.page-save-indicator { font-size: 12px; color: #555; font-weight: 500; }
+.voice-fab {
+  position: fixed;
+  right: 18px;
+  bottom: 24px;
+  width: 58px;
+  height: 58px;
+  border: none;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #6a1b9a, #8e24aa);
+  color: white;
+  font-size: 25px;
+  cursor: pointer;
+  z-index: 9998;
+  box-shadow: 0 5px 18px rgba(106,27,154, 0.35);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.toast-msg {
+  position: fixed;
+  bottom: 25px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(33, 33, 33, 0.92);
+  color: white;
+  padding: 10px 20px;
+  border-radius: 25px;
+  font-size: 14px;
+  font-weight: 500;
+  box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+  z-index: 10000;
+  display: none;
+}
+#loadingBox { text-align: center; padding: 40px 10px; color: #666; font-size: 15px; }
+
+/* Modal Stying */
+.custom-modal-overlay {
+  position: fixed;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: rgba(0, 0, 0, 0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+  padding: 16px;
+}
+.custom-modal-card {
+  background: white;
+  border-radius: 12px;
+  width: 100%;
+  max-width: 380px;
+  padding: 20px;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.25);
+}
+.modal-title { font-size: 16.5px; font-weight: 600; color: #1a73e8; margin-bottom: 12px; }
+.modal-input {
+  width: 100%;
+  padding: 10px 12px;
+  font-size: 14.5px;
+  border: 1.5px solid #ccc;
+  border-radius: 8px;
+  outline: none;
+  margin-top: 4px;
+  margin-bottom: 14px;
+}
+.modal-input:focus { border-color: #1a73e8; box-shadow: 0 0 0 2px rgba(26,115,232,0.2); }
+.modal-actions { display: flex; justify-content: flex-end; gap: 10px; }
+.btn-modal-cancel { background: #f1f3f4; color: #444; border: none; border-radius: 7px; padding: 8px 14px; font-size: 13.5px; cursor: pointer; }
+.btn-modal-confirm { background: #1a73e8; color: white; border: none; border-radius: 7px; padding: 8px 16px; font-size: 13.5px; font-weight: 600; cursor: pointer; }
+</style>
+</head>
+<body>
+<div class="header">
+  <h1>📖 অনলাইন ডায়েরি</h1>
+  <div class="save-status-bar" id="globalStatus">
+    <span>☁️ ড্রাইভ ও শিট সংযুক্ত</span>
+  </div>
+</div>
+
+<!-- পোর্টাল / হোম ইন্টারফেস -->
+<div class="portal-container" id="portalView">
+  <div class="portal-nav-bar">
+    <button type="button" class="btn-portal-tab active" id="tabGeneral" onclick="window.switchPortalTab('general')">
+      সাধারণ ডায়েরি
+    </button>
+    <button type="button" class="btn-portal-tab" id="tabPersonal" onclick="window.switchPortalTab('personal')">
+      🔒 ব্যক্তিগত ডায়েরি
+    </button>
+  </div>
+  <div class="portal-card">
+    <div id="portalItems"></div>
+    <button type="button" class="btn-create-portal-only" id="btnEmptyCreateDiary" style="display:none;" onclick="window.showCreateDiaryModal()">
+      + নতুন ডায়েরি তৈরি করুন
+    </button>
+    <button type="button" class="btn-portal-lock" id="btnPortalLock" style="display:none;" onclick="window.lockPersonalDiaries()">
+      🔒 ব্যক্তিগত ডায়েরি লক করুন
+    </button>
+  </div>
+</div>
+
+<!-- মূল ডায়েরি ভিউ -->
+<div class="container" id="mainDiaryView" style="display:none;">
+  <div class="diary-bar">
+    <div class="dropdown">
+      <button type="button" class="btn-diary-toggle" id="btnDiaryToggle" onclick="window.handleToggleDiaryMenu(event)">
+        <span id="currentDiaryNameLabel">ডায়েরি</span> ▾
+      </button>
+      <div class="dropdown-menu menu-left" id="diaryMenu"></div>
+    </div>
+    <button type="button" class="btn-create-diary" id="btnCreateDiary" onclick="window.showCreateDiaryModal()">
+      + নতুন ডায়েরি
+    </button>
+  </div>
+
+  <div class="action-bar">
+    <div class="dropdown">
+      <button type="button" class="btn-dropdown-toggle" id="btnDateToggle" onclick="window.handleToggleDateMenu(event)">
+        📅 তারিখ
+      </button>
+      <div class="dropdown-menu menu-left" id="dateMenu"></div>
+    </div>
+    <button type="button" class="btn-write" id="btnWrite" onclick="window.handleAddNewPage()">
+      ➕ নতুন পৃষ্ঠা
+    </button>
+    <div class="dropdown">
+      <button type="button" class="btn-dropdown-toggle" id="btnDropToggle" onclick="window.handleToggleDownloadMenu(event)">
+        ⚙️ মেনু
+      </button>
+      <div class="dropdown-menu menu-right" id="downloadMenu">
+        <button type="button" class="dropdown-item" onclick="window.handlePrintPdf(false)">আজকের দিন (PDF/Print)</button>
+        <button type="button" class="dropdown-item" onclick="window.exportWord(false)">আজকের দিন (Word)</button>
+        <button type="button" class="dropdown-item" style="color:#1a73e8; font-weight:600;" onclick="window.handlePrintPdf(true)">সম্পূর্ণ ডায়েরি (PDF)</button>
+        <button type="button" class="dropdown-item" style="color:#1a73e8; font-weight:600;" onclick="window.exportWord(true)">সম্পূর্ণ ডায়েরি (Word)</button>
+        <button type="button" class="dropdown-item" style="color:#6a1b9a; font-weight:600;" onclick="window.showApiKeyModal()">Gemini API কী সেট করুন</button>
+        <a id="folderLinkItem" href="#" target="_blank" class="dropdown-item" style="display:none;">📁 ডায়েরি ফোল্ডার দেখুন</a>
+        <a id="sheetLinkItem" href="#" target="_blank" class="dropdown-item" style="display:none;">📊 গুগল শিট ডাটাবেস</a>
+        <button type="button" class="dropdown-item" id="btnChangePinItem" style="display:none;" onclick="window.showChangePinModal()">পাসওয়ার্ড পরিবর্তন</button>
+        <button type="button" class="dropdown-item item-lock" id="btnDropLockItem" style="display:none;" onclick="window.lockPersonalDiaries()">ডায়েরি লক করুন</button>
+        <button type="button" class="dropdown-item item-delete" onclick="window.handleDeleteLastPage()">🗑️ শেষ পৃষ্ঠা মুছুন</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- AI অটো-কারেকশন অন/অফ সুইচ ব্যানার -->
+  <div class="ai-switch-banner">
+    <div class="switch-label-wrap">
+      <span>✨ ভয়েস লেখায় AI অটো-কারেকশন:</span>
+      <b id="aiSwitchStatusText" style="color:#888;">বন্ধ</b>
+    </div>
+    <label class="toggle-switch">
+      <input type="checkbox" id="chkAiAutoRefine" onchange="window.handleToggleAiRefine(this.checked)">
+      <span class="toggle-slider"></span>
+    </label>
+  </div>
+
+  <div class="active-date-banner" id="dateBanner">
+    <div class="active-date-text" id="dateBannerText">📅 আজকের ডায়েরি</div>
+    <button type="button" class="btn-return-today" id="btnReturnToday" style="display:none;" onclick="window.selectDateKey(window.todayDateKey)">আজ-এ ফিরুন</button>
+  </div>
+
+  <div id="loadingBox" style="display:none;">গুগল ড্রাইভ থেকে ডায়েরি লোড হচ্ছে...</div>
+  <div id="entriesList" style="display:none;"></div>
+</div>
+
+<button type="button" id="voiceFab" class="voice-fab" style="display:none;" title="ভয়েস দিয়ে লিখুন" onclick="window.toggleVoiceDiary()">🎙️</button>
+<div id="toastBox" class="toast-msg"></div>
+
+<!-- API Key Modal -->
+<div id="apiKeyModalOverlay" class="custom-modal-overlay" style="display:none;">
+  <div class="custom-modal-card">
+    <div class="modal-title" style="color:#6a1b9a;">Gemini API কী সেট করুন</div>
+    <div style="font-size: 13px; color: #555; margin-bottom: 8px; line-height: 1.5;">
+      মুখে কথা বলার পর স্বয়ংক্রিয়ভাবে দাঁড়ি-কমা ও ব্যাকরণ ঠিক করতে আপনার গুগল জেমিনির API Key দিন।
+    </div>
+    <input type="password" id="geminiApiKeyInput" class="modal-input" placeholder="AIzaSy... অথবা AQ.Ab8..." />
+    <div class="modal-actions">
+      <button type="button" class="btn-modal-cancel" onclick="window.closeApiKeyModal()">বাতিল</button>
+      <button type="button" class="btn-modal-confirm" style="background:#6a1b9a;" onclick="window.saveApiKey()">সংরক্ষণ করুন</button>
+    </div>
+  </div>
+</div>
+
+<!-- Create Diary Modal -->
+<div id="createDiaryModalOverlay" class="custom-modal-overlay" style="display:none;">
+  <div class="custom-modal-card">
+    <div class="modal-title">নতুন ডায়েরি তৈরি</div>
+    <label style="font-size: 13.5px; font-weight: 600; color: #444; display:block; margin-bottom: 4px;">ডায়েরির নাম:</label>
+    <input type="text" id="newDiaryNameInput" class="modal-input" placeholder="যেমন: ব্যক্তিগত খাতা, স্মৃতি..." />
+    <label style="font-size: 13.5px; font-weight: 600; color: #444; display:block; margin-bottom: 6px;">ডায়েরির ধরন নির্বাচন করুন:</label>
+    <div style="display: flex; flex-direction:column; gap:8px; margin-bottom: 16px;">
+      <label style="display:flex; align-items:center; gap: 10px; padding:9px 12px; border:1.5px solid #c8e6c9; border-radius:8px; cursor:pointer; background:#fafffa;">
+        <input type="radio" name="diaryCategoryRadio" id="radioGen" value="general" checked />
+        <div>
+          <div style="font-size:14px; font-weight:600; color:#2e7d32;">সাধারণ ডায়েরি</div>
+          <div style="font-size:11.5px; color:#666;">সরাসরি যে কেউ দেখতে ও পড়তে পারবে</div>
+        </div>
+      </label>
+      <label style="display:flex; align-items:center; gap:10px; padding:9px 12px; border:1.5px solid #d2e3fc; border-radius:8px; cursor:pointer; background:#f8fbff;">
+        <input type="radio" name="diaryCategoryRadio" id="radioPer" value="personal" />
+        <div>
+          <div style="font-size:14px; font-weight:600; color:#1a73e8;">🔒 ব্যক্তিগত ডায়েরি</div>
+          <div style="font-size:11.5px; color:#666;">পাসওয়ার্ড দিয়ে সুরক্ষিত থাকবে</div>
+        </div>
+      </label>
+    </div>
+    <div class="modal-actions">
+      <button type="button" class="btn-modal-cancel" onclick="window.closeCreateDiaryModal()">বাতিল</button>
+      <button type="button" class="btn-modal-confirm" onclick="window.confirmCreateDiary()">তৈরি করুন</button>
+    </div>
+  </div>
+</div>
+
+<!-- Pin Modal -->
+<div id="pinModalOverlay" class="custom-modal-overlay" style="display:none;">
+  <div class="custom-modal-card">
+    <div class="modal-title">🔒 পাসওয়ার্ড প্রয়োজন</div>
+    <div id="pinModalSubtext" style="font-size: 13.5px; color: #555; margin-bottom: 6px;">ব্যক্তিগত ডায়েরিতে প্রবেশের জন্য পাসওয়ার্ড দিন:</div>
+    <input type="password" id="pinModalInput" class="modal-input" placeholder="পাসওয়ার্ড লিখুন..." />
+    <div class="modal-actions">
+      <button type="button" class="btn-modal-cancel" onclick="window.closePinModal()">বাতিল</button>
+      <button type="button" class="btn-modal-confirm" id="btnPinConfirm">নিশ্চিত করুন</button>
+    </div>
+  </div>
+</div>
+
+<!-- Change Pin Modal -->
+<div id="changePinModalOverlay" class="custom-modal-overlay" style="display:none;">
+  <div class="custom-modal-card">
+    <div class="modal-title">🔑 পাসওয়ার্ড পরিবর্তন</div>
+    <label style="font-size: 13.5px; font-weight: 600; color: #444; display:block; margin-bottom: 4px;">বর্তমান পাসওয়ার্ড:</label>
+    <input type="password" id="oldPinInput" class="modal-input" placeholder="বর্তমান পাসওয়ার্ড লিখুন" />
+    <label style="font-size: 13.5px; font-weight: 600; color: #444; display:block; margin-bottom: 4px;">নতুন পাসওয়ার্ড (কমপক্ষে ৪ সংখ্যা):</label>
+    <input type="password" id="newPinInput" class="modal-input" placeholder="নতুন পাসওয়ার্ড লিখুন" />
+    <div class="modal-actions">
+      <button type="button" class="btn-modal-cancel" onclick="window.closeChangePinModal()">বাতিল</button>
+      <button type="button" class="btn-modal-confirm" onclick="window.confirmChangePin()">পরিবর্তন করুন</button>
+    </div>
+  </div>
+</div>
+
+<script src="config.js"></script>
+<script>
+/* JB-Diary GitHub Frontend → Apps Script JSONP Bridge
+   This keeps the existing google.script.run-style code working from GitHub Pages.
+*/
+(function () {
+  'use strict';
+  window.JB_DIARY_API_URL = window.JB_DIARY_API_URL || 'PASTE_YOUR_APPS_SCRIPT_WEB_APP_EXEC_URL_HERE';
+
+  function apiCall(action, args, onSuccess, onFailure) {
+    if (!window.JB_DIARY_API_URL || window.JB_DIARY_API_URL.indexOf('PASTE_') === 0) {
+      if (onFailure) onFailure(new Error('Apps Script Web App URL এখনো সেট করা হয়নি।'));
+      return;
+    }
+    var callback = '__jbDiaryCb_' + Date.now() + '_' + Math.floor(Math.random() * 1000000);
+    var params = new URLSearchParams();
+    params.set('api', '1');
+    params.set('action', action);
+    params.set('callback', callback);
+    params.set('_', String(Date.now()));
+
+    Object.keys(args || {}).forEach(function (key) {
+      var value = args[key];
+      if (value === undefined) return;
+      if (value !== null && typeof value === 'object') value = JSON.stringify(value);
+      params.set(key, String(value));
+    });
+
+    var script = document.createElement('script');
+    var done = false;
+    function finish() {
+      if (script.parentNode) script.parentNode.removeChild(script);
+      try { delete window[callback]; } catch (e) { window[callback] = undefined; }
+    }
+    window[callback] = function (result) {
+      if (done) return;
+      done = true;
+      finish();
+      if (result && result.success === false) {
+        if (onFailure) onFailure(result);
+      } else {
+        if (onSuccess) onSuccess(result);
+      }
+    };
+    script.onerror = function () {
+      if (done) return;
+      done = true;
+      finish();
+      if (onFailure) onFailure(new Error('Apps Script API-তে সংযোগ করা যায়নি।'));
+    };
+    script.src = window.JB_DIARY_API_URL + (window.JB_DIARY_API_URL.indexOf('?') >= 0 ? '&' : '?') + params.toString();
+    document.head.appendChild(script);
+  }
+
+  /* Compatibility shim: the original diary code can continue using
+     google.script.run.withSuccessHandler(...).method(...). */
+  window.google = window.google || {};
+  window.google.script = window.google.script || {};
+  Object.defineProperty(window.google.script, 'run', {
+    configurable: true,
+    get: function () {
+      var successHandler = null;
+      var failureHandler = null;
+      var runner = new Proxy({}, {
+        get: function (target, prop) {
+          if (prop === 'withSuccessHandler') {
+            return function (fn) { successHandler = fn; return runner; };
+          }
+          if (prop === 'withFailureHandler') {
+            return function (fn) { failureHandler = fn; return runner; };
+          }
+          return function () {
+            var args = Array.prototype.slice.call(arguments);
+            /* The backend wrapper derives dayPages/remainingDayPages itself,
+               so large arrays are not sent through the URL. */
+            if (prop === 'saveOrUpdatePage') {
+              apiCall(prop, { diaryName: args[0], pageData: args[1] }, successHandler, failureHandler);
+            } else if (prop === 'deletePageFromSheet') {
+              apiCall(prop, { diaryName: args[0], pageId: args[1], dateKey: args[2] }, successHandler, failureHandler);
+            } else if (prop === 'verifyPersonalPin') {
+              apiCall(prop, { inputPin: args[0] }, successHandler, failureHandler);
+            } else if (prop === 'changePersonalPin') {
+              apiCall(prop, { oldPin: args[0], newPin: args[1] }, successHandler, failureHandler);
+            } else if (prop === 'createNewDiary') {
+              apiCall(prop, { newDiaryName: args[0], diaryCategory: args[1] }, successHandler, failureHandler);
+            } else if (prop === 'loadDiaryData') {
+              apiCall(prop, { diaryName: args[0] }, successHandler, failureHandler);
+            } else if (prop === 'processWithGemini') {
+              apiCall(prop, { rawText: args[0], apiKey: args[1] }, successHandler, failureHandler);
+            } else {
+              apiCall(prop, {}, successHandler, failureHandler);
+            }
+          };
+        }
+      });
+      return runner;
+    }
+  });
+})();
+</script>
+<script>
+window.addEventListener('load', function(){
+  if (window.JB_DIARY_API_URL && window.JB_DIARY_API_URL.indexOf('PASTE_') === 0) {
+    setTimeout(function(){
+      if (typeof showToast === 'function') showToast('⚙️ GitHub Frontend চালু হয়েছে—Apps Script Web App URL এখনো বসানো হয়নি।');
+    }, 700);
+  }
+});
+</script>
+
+<script>
+var daysBn = ['রবিবার', 'সোমবার', 'মঙ্গলবার', 'বুধবার', 'বৃহস্পতিবার', 'শুক্রবার', 'শনিবার'];
+var monthsBn = ['জানুয়ারি', 'ফেব্রুয়ারি', 'মার্চ', 'এপ্রিল', 'মে', 'জুন', 'জুলাই', 'আগস্ট', 'সেপ্টেম্বর', 'অক্টোবর', 'নভেম্বর', 'ডিসেম্বর'];
+var bnNums = ['০', '১', '২', '৩', '৪', '৫', '৬', '৭', '৮', '৯'];
+var currentPortalTab = "general";
+var currentDiary = "";
+var isPersonalUnlocked = false;
+var diaryList = [];
+var diaryCategories = {};
+var allLoadedPages = [];
+var currentActiveDateKey = "";
+var saveTimers = {};
+var isSyncingPending = false;
+
+var AUTO_LOCK_TIMEOUT_MS = 20 * 60 * 1000;
+var lastActivityTime = Date.now();
+
+function updateLastActivity() {
+  lastActivityTime = Date.now();
+  try {
+    if (isPersonalUnlocked) {
+      sessionStorage.setItem("diary_last_active_time", String(lastActivityTime));
+    }
+  } catch(e) {}
+}
+
+function checkInactivityTimeout() {
+  if (!isPersonalUnlocked) return;
+  var now = Date.now();
+  var storedLast = parseInt(sessionStorage.getItem("diary_last_active_time") || "0", 10);
+  var effectiveLast = Math.max(lastActivityTime, storedLast);
+  if (now - effectiveLast > AUTO_LOCK_TIMEOUT_MS) {
+    window.lockPersonalDiaries(true);
+  }
+}
+
+['mousedown', 'keydown', 'scroll', 'touchstart', 'input'].forEach(function(evt) {
+  window.addEventListener(evt, updateLastActivity, { passive: true });
+});
+setInterval(checkInactivityTimeout, 10000);
+document.addEventListener("visibilitychange", function() {
+  if (!document.hidden) {
+    checkInactivityTimeout();
+  }
+});
+
+var VOICE_HELPER_URL = "https://jaydebbd.github.io/JB-Diary/voice.html";
+var isVoiceRecording = false;
+var voiceTargetPage = null;
+var voiceHelperWindow = null;
+var voiceSessionToken = null;
+
+function isAiAutoRefineEnabled() {
+  return localStorage.getItem("diary_ai_auto_refine") === "true";
+}
+
+window.handleToggleAiRefine = function(isChecked) {
+  localStorage.setItem("diary_ai_auto_refine", isChecked ? "true" : "false");
+  updateAiSwitchUI(isChecked);
+  if (isChecked) {
+    showToast("✨ ভয়েস লেখায় স্বয়ংক্রিয় AI সম্পাদন চালু করা হয়েছে");
+  } else {
+    showToast("⚡ গিটহাবের লেখা সরাসরি ডায়েরিতে যোগ হবে (AI ছাড়াই)");
+  }
+};
+
+function updateAiSwitchUI(isEnabled) {
+  var chk = document.getElementById("chkAiAutoRefine");
+  var txt = document.getElementById("aiSwitchStatusText");
+  if (chk) chk.checked = isEnabled;
+  if (txt) {
+    txt.innerText = isEnabled ? "চালু" : "বন্ধ";
+    txt.style.color = isEnabled ? "#1e8e3e" : "#888";
+  }
+}
+
+function getStorageKey(diary) {
+  return "offline_diary_pages_" + (diary || currentDiary);
+}
+
+function saveToLocalStorage(diary, pages) {
+  try {
+    localStorage.setItem(getStorageKey(diary), JSON.stringify(pages));
+  } catch(e) {}
+}
+
+function getFromLocalStorage(diary) {
+  try {
+    var data = localStorage.getItem(getStorageKey(diary));
+    return data ? JSON.parse(data) : [];
+  } catch(e) {
+    return [];
+  }
+}
+
+function getPendingQueue() {
+  try {
+    var q = localStorage.getItem("pending_diary_sync_queue");
+    return q ? JSON.parse(q) : [];
+  } catch(e) {
+    return [];
+  }
+}
+
+function addToPendingQueue(diaryName, pageData, dayPages) {
+  try {
+    var queue = getPendingQueue();
+    var index = -1;
+    for (var i = 0; i < queue.length; i++) {
+      if (queue[i].diaryName === diaryName && queue[i].pageData.id === pageData.id) {
+        index = i;
+        break;
+      }
+    }
+    if (index !== -1) {
+      queue[index] = { diaryName: diaryName, pageData: pageData, dayPages: dayPages, time: Date.now() };
+    } else {
+      queue.push({ diaryName: diaryName, pageData: pageData, dayPages: dayPages, time: Date.now() });
+    }
+    localStorage.setItem("pending_diary_sync_queue", JSON.stringify(queue));
+  } catch(e) {}
+}
+
+function syncPendingQueue() {
+  if (!navigator.onLine || isSyncingPending) return;
+  var queue = getPendingQueue();
+  if (!queue || queue.length === 0) return;
+  isSyncingPending = true;
+  setStatus('⏳ অফলাইন ডাটা ড্রাইভে সিঙ্ক হচ্ছে...', 'rgba(234, 134, 0, 0.4)');
+
+  function syncNext() {
+    var currentQueue = getPendingQueue();
+    if (currentQueue.length === 0) {
+      isSyncingPending = false;
+      setStatus('☁️ ড্রাইভ ও শিট সংযুক্ত', 'rgba(30, 142, 62, 0.4)');
+      showToast('☁️ অফলাইনের সব লেখা সফলভাবে অনলাইনে সেভ হয়েছে!');
+      return;
+    }
+    var item = currentQueue[0];
+    if (typeof google !== 'undefined' && google.script && google.script.run) {
+      google.script.run
+        .withSuccessHandler(function(res) {
+          if (res && res.success) {
+            var freshQueue = getPendingQueue();
+            freshQueue.shift();
+            localStorage.setItem("pending_diary_sync_queue", JSON.stringify(freshQueue));
+            var ind = document.getElementById('ind_' + item.pageData.id);
+            if (ind) ind.innerText = 'ড্রাইভে সেভড';
+            syncNext();
+          } else {
+            isSyncingPending = false;
+          }
+        })
+        .withFailureHandler(function() {
+          isSyncingPending = false;
+        })
+        .saveOrUpdatePage(item.diaryName, item.pageData, item.dayPages);
+    } else {
+      isSyncingPending = false;
+    }
+  }
+  syncNext();
+}
+
+window.addEventListener('online', function() {
+  setStatus('📶 ইন্টারনেট সংযুক্ত হয়েছে, সিঙ্ক হচ্ছে...', 'rgba(30, 142, 62, 0.4)');
+  syncPendingQueue();
+});
+window.addEventListener('offline', function() {
+  setStatus('📴 অফলাইন মোড (লেখা ডিভাইসে সেভ হচ্ছে)', 'rgba(234, 134, 0, 0.4)');
+  showToast('⚠️ ইন্টারনেট সংযোগ বিচ্ছিন্ন! লেখা লোকালি সেভ হচ্ছে।');
+});
+setInterval(function() {
+  if (navigator.onLine) {
+    syncPendingQueue();
+  }
+}, 10000);
+
+function toBn(num) {
+  return String(num).split('').map(function(d) { return bnNums[d] !== undefined ? bnNums[d] : d; }).join('');
+}
+
+function getTodayKey() {
+  var now = new Date();
+  var utc = now.getTime() + (now.getTimezoneOffset() * 60000);
+  var bdTime = new Date(utc + (3600000 * 6));
+  var y = bdTime.getFullYear();
+  var m = String(bdTime.getMonth() + 1).padStart(2, '0');
+  var d = String(bdTime.getDate()).padStart(2, '0');
+  return y + '-' + m + '-' + d;
+}
+window.todayDateKey = getTodayKey();
+
+function getBnTimestamp() {
+  var now = new Date();
+  var utc = now.getTime() + (now.getTimezoneOffset() * 60000);
+  var bdTime = new Date(utc + (3600000 * 6));
+  var day = daysBn[bdTime.getDay()];
+  var date = toBn(bdTime.getDate());
+  var month = monthsBn[bdTime.getMonth()];
+  var year = toBn(bdTime.getFullYear());
+  var rawH = bdTime.getHours();
+  var rawM = bdTime.getMinutes();
+  var ampm = rawH >= 12 ? 'pm' : 'am';
+  var h12 = rawH % 12 || 12;
+  var mStr = String(rawM).padStart(2, '0');
+  return '📅 ' + day + ', ' + date + ' ' + month + ' ' + year + ' | ' + toBn(h12) + ':' + toBn(mStr) + ' ' + ampm;
+}
+
+function formatDateKeyToSlashBn(dateKey) {
+  if (!dateKey) return "";
+  var parts = String(dateKey).match(/(\d{4})[^\d](\d{1,2})[^\d](\d{1,2})/);
+  if (!parts) return dateKey;
+  var y = parseInt(parts[1], 10);
+  var m = parseInt(parts[2], 10);
+  var d = parseInt(parts[3], 10);
+  var dt = new Date(y, m - 1, d);
+  return toBn(String(d).padStart(2, '0')) + '/' + toBn(String(m).padStart(2, '0')) + '/' + toBn(y) + ' - ' + daysBn[dt.getDay()];
+}
+
+function formatMonthKeyToBn(monthKey) {
+  if (!monthKey) return "";
+  var parts = monthKey.split('-');
+  var m = parseInt(parts[1] || '1', 10);
+  return monthsBn[m - 1] || 'মাস';
+}
+
+function setStatus(text, bg) {
+  var el = document.getElementById('globalStatus');
+  if (el) {
+    el.innerHTML = text;
+    if (bg) el.style.background = bg;
+  }
+}
+
+function showToast(msg) {
+  var toast = document.getElementById('toastBox');
+  if (toast) {
+    toast.innerText = msg;
+    toast.style.display = 'block';
+    setTimeout(function() { toast.style.display = 'none'; }, 2500);
+  }
+}
+
+// পোর্টাল লজিক
+window.switchPortalTab = function(type) {
+  checkInactivityTimeout();
+  if (type === "personal" && !isPersonalUnlocked) {
+    window.promptPersonalUnlock();
+    return;
+  }
+  currentPortalTab = type;
+  document.getElementById('tabGeneral').className = 'btn-portal-tab ' + (type === 'general' ? 'active' : '');
+  document.getElementById('tabPersonal').className = 'btn-portal-tab ' + (type === 'personal' ? 'active' : '');
+  renderPortalItems();
+};
+
+function renderPortalItems() {
+  var container = document.getElementById('portalItems');
+  var btnCreateEmpty = document.getElementById('btnEmptyCreateDiary');
+  var btnLock = document.getElementById('btnPortalLock');
+  if (!container) return;
+  var filtered = diaryList.filter(function(d) {
+    return (diaryCategories[d] || "general") === currentPortalTab;
+  });
+  if (btnLock) {
+    btnLock.style.display = (currentPortalTab === 'personal' && isPersonalUnlocked) ? 'block' : 'none';
+  }
+  if (filtered.length === 0) {
+    container.innerHTML = '<div class="portal-empty-box">কোন ডায়েরি নাই।</div>';
+    if (btnCreateEmpty) btnCreateEmpty.style.display = 'block';
+  } else {
+    var html = '';
+    filtered.forEach(function(dName) {
+      var icon = (currentPortalTab === 'personal') ? '🔒' : '📔';
+      html += '<button type="button" class="portal-item-btn" onclick="window.enterDiaryPage(\'' + dName + '\')">';
+      html += '<span>' + icon + ' ' + dName + '</span>';
+      html += '<span style="font-size:12px; color:#1a73e8;">খুলুন ➔</span>';
+      html += '</button>';
+    });
+    container.innerHTML = html;
+    if (btnCreateEmpty) btnCreateEmpty.style.display = 'none';
+  }
+}
+
+window.enterDiaryPage = function(dName) {
+  checkInactivityTimeout();
+  if (diaryCategories[dName] === "personal" && !isPersonalUnlocked) {
+    window.promptPersonalUnlock(dName);
+    return;
+  }
+  document.getElementById('portalView').style.display = 'none';
+  document.getElementById('mainDiaryView').style.display = 'block';
+  document.getElementById('voiceFab').style.display = 'flex';
+  window.switchDiary(dName);
+};
+
+window.returnToHomePortal = function() {
+  document.getElementById('mainDiaryView').style.display = 'none';
+  document.getElementById('voiceFab').style.display = 'none';
+  document.getElementById('portalView').style.display = 'block';
+  window.switchPortalTab(currentPortalTab);
+};
+
+window.handleToggleDiaryMenu = function(e) {
+  if (e) e.stopPropagation();
+  var dMenu = document.getElementById('diaryMenu');
+  document.getElementById('dateMenu').style.display = 'none';
+  document.getElementById('downloadMenu').style.display = 'none';
+  dMenu.style.display = (dMenu.style.display === 'block') ? 'none' : 'block';
+};
+
+window.handleToggleDateMenu = function(e) {
+  if (e) e.stopPropagation();
+  var menu = document.getElementById('dateMenu');
+  document.getElementById('diaryMenu').style.display = 'none';
+  document.getElementById('downloadMenu').style.display = 'none';
+  menu.style.display = (menu.style.display === 'block') ? 'none' : 'block';
+};
+
+window.handleToggleDownloadMenu = function(e) {
+  if (e) e.stopPropagation();
+  var menu = document.getElementById('downloadMenu');
+  document.getElementById('diaryMenu').style.display = 'none';
+  document.getElementById('dateMenu').style.display = 'none';
+  menu.style.display = (menu.style.display === 'block') ? 'none' : 'block';
+};
+
+window.addEventListener('click', function(e) {
+  ['diaryMenu', 'dateMenu', 'downloadMenu'].forEach(function(id) {
+    var el = document.getElementById(id);
+    if (el && el.style.display === 'block' && !el.contains(e.target) && !e.target.closest('button')) {
+      el.style.display = 'none';
+    }
+  });
+});
+
+function renderDiaryDropdown() {
+  var menu = document.getElementById('diaryMenu');
+  if (!menu) return;
+  var html = '';
+  var isAllowedAdmin = isPersonalUnlocked && (diaryCategories[currentDiary] === "personal");
+  var btnChangePin = document.getElementById('btnChangePinItem');
+  if (btnChangePin) btnChangePin.style.display = isAllowedAdmin ? 'flex' : 'none';
+  var btnDropLock = document.getElementById('btnDropLockItem');
+  if (btnDropLock) btnDropLock.style.display = isPersonalUnlocked ? 'flex' : 'none';
+  var fLink = document.getElementById('folderLinkItem');
+  var sLink = document.getElementById('sheetLinkItem');
+  if (fLink) fLink.style.display = isAllowedAdmin ? 'flex' : 'none';
+  if (sLink) sLink.style.display = isAllowedAdmin ? 'flex' : 'none';
+
+  var generals = diaryList.filter(function(d) { return (diaryCategories[d] || "general") === "general"; });
+  var personals = diaryList.filter(function(d) { return (diaryCategories[d] || "general") === "personal"; });
+
+  html += '<button type="button" class="dropdown-item" style="color:#1a73e8; font-weight:600;" onclick="window.returnToHomePortal()"><span>🏠 প্রধান মেনুতে যান</span></button>';
+  if (isPersonalUnlocked) {
+    if (personals.length > 0) {
+      html += '<div class="section-header">🔒 ব্যক্তিগত ডায়েরি</div>';
+      personals.forEach(function(pName) {
+        var isActP = (pName === currentDiary) ? ' item-active' : '';
+        html += '<button type="button" class="dropdown-item' + isActP + '" onclick="window.switchDiary(\'' + pName + '\')"><span>' + pName + '</span></button>';
+      });
+    }
+    if (generals.length > 0) {
+      html += '<div class="section-header">📔 সাধারণ ডায়েরি</div>';
+      generals.forEach(function(gName) {
+        var isActG = (gName === currentDiary) ? ' item-active' : '';
+        html += '<button type="button" class="dropdown-item' + isActG + '" onclick="window.switchDiary(\'' + gName + '\')"><span>' + gName + '</span></button>';
+      });
+    }
+    html += '<button type="button" class="dropdown-item item-lock" onclick="window.lockPersonalDiaries()"><span>🔒 ডায়েরি লক করুন</span></button>';
+  } else {
+    if (generals.length > 0) {
+      html += '<div class="section-header">📔 সাধারণ ডায়েরি</div>';
+      generals.forEach(function(genName) {
+        var isAct = (genName === currentDiary) ? ' item-active' : '';
+        html += '<button type="button" class="dropdown-item' + isAct + '" onclick="window.switchDiary(\'' + genName + '\')"><span>' + genName + '</span></button>';
+      });
+    }
+    html += '<button type="button" class="dropdown-item" style="color:#8c7355; font-weight:600;" onclick="window.promptPersonalUnlock()"><span>🔒 ব্যক্তিগত ডায়েরি খুলুন</span><span style="font-size:11px;">পাসওয়ার্ড</span></button>';
+  }
+  menu.innerHTML = html;
+  var lbl = document.getElementById('currentDiaryNameLabel');
+  if (lbl) lbl.innerText = ((diaryCategories[currentDiary] === "personal") ? "🔒 " : "📔 ") + currentDiary;
+}
+
+window.lockPersonalDiaries = function(isAuto) {
+  isPersonalUnlocked = false;
+  try {
+    sessionStorage.removeItem("diary_personal_unlocked");
+    sessionStorage.removeItem("diary_last_active_time");
+  } catch(e) {}
+  if (isAuto) {
+    showToast("🔒 ২০ মিনিট নিষ্ক্রিয় থাকায় ব্যক্তিগত ডায়েরি লক হয়েছে!");
+  } else {
+    showToast("🔒 ব্যক্তিগত ডায়েরি লক করা হয়েছে!");
+  }
+  var curCat = diaryCategories[currentDiary] || "general";
+  if (curCat === "personal") {
+    window.returnToHomePortal();
+    window.switchPortalTab('general');
+  } else {
+    renderDiaryDropdown();
+    renderPortalItems();
+  }
+};
+
+window.promptPersonalUnlock = function(target) {
+  document.getElementById('pinModalOverlay').style.display = 'flex';
+  var input = document.getElementById('pinModalInput');
+  input.value = '';
+  input.focus();
+  document.getElementById('btnPinConfirm').onclick = function() {
+    var pin = input.value.trim();
+    if (!pin) return;
+    document.getElementById('pinModalOverlay').style.display = 'none';
+    if (typeof google !== 'undefined' && google.script && google.script.run) {
+      setStatus('🔐 পাসওয়ার্ড যাচাই হচ্ছে...', 'rgba(234, 134, 0, 0.4)');
+      google.script.run
+        .withSuccessHandler(function(res) {
+          if (res && res.success) {
+            isPersonalUnlocked = true;
+            updateLastActivity();
+            try { sessionStorage.setItem("diary_personal_unlocked", "true"); } catch(e) {}
+            if (target) {
+              window.enterDiaryPage(target);
+            } else {
+              window.switchPortalTab('personal');
+            }
+            renderDiaryDropdown();
+            setStatus('🔓 ব্যক্তিগত ডায়েরি উন্মুক্ত', 'rgba(30, 142, 62, 0.4)');
+          } else {
+            showToast("❌ ভুল পাসওয়ার্ড!");
+            setStatus('❌ ভুল পাসওয়ার্ড', 'rgba(217, 48, 37, 0.4)');
+          }
+        })
+        .verifyPersonalPin(pin);
+    }
+  };
+};
+
+window.closePinModal = function() {
+  document.getElementById('pinModalOverlay').style.display = 'none';
+};
+
+window.showChangePinModal = function() {
+  var downMenu = document.getElementById('downloadMenu');
+  if (downMenu) downMenu.style.display = 'none';
+  var overlay = document.getElementById('changePinModalOverlay');
+  var oldInput = document.getElementById('oldPinInput');
+  var newInput = document.getElementById('newPinInput');
+  oldInput.value = '';
+  newInput.value = '';
+  overlay.style.display = 'flex';
+  oldInput.focus();
+};
+
+window.closeChangePinModal = function() {
+  var overlay = document.getElementById('changePinModalOverlay');
+  if (overlay) overlay.style.display = 'none';
+};
+
+window.confirmChangePin = function() {
+  var oldPin = document.getElementById('oldPinInput').value.trim();
+  var newPin = document.getElementById('newPinInput').value.trim();
+  if (!oldPin) { showToast("⚠️️ বর্তমান পাসওয়ার্ড লিখুন!"); return; }
+  if (!newPin || newPin.length < 4) { showToast("⚠️ নতুন পাসওয়ার্ড কমপক্ষে ৪ সংখ্যার দিন!"); return; }
+  window.closeChangePinModal();
+  setStatus('🔑 পাসওয়ার্ড পরিবর্তন হচ্ছে...', 'rgba(234, 134, 0, 0.4)');
+  if (typeof google !== 'undefined' && google.script && google.script.run) {
+    google.script.run
+      .withSuccessHandler(function(res) {
+        if (res && res.success) {
+          showToast("✅ পাসওয়ার্ড সফলভাবে পরিবর্তন করা হয়েছে!");
+          setStatus('✅ পাসওয়ার্ড পরিবর্তিত', 'rgba(30, 142, 62, 0.4)');
+        } else {
+          showToast("❌ ত্রুটি: " + (res.error || "পাসওয়ার্ড সঠিক নয়"));
+          setStatus('❌ পাসওয়ার্ড ভুল', 'rgba(217, 48, 37, 0.4)');
+        }
+      })
+      .changePersonalPin(oldPin, newPin);
+  }
+};
+
+window.showCreateDiaryModal = function() {
+  var overlay = document.getElementById('createDiaryModalOverlay');
+  var nameInput = document.getElementById('newDiaryNameInput');
+  nameInput.value = '';
+  if (currentPortalTab === 'personal') {
+    document.getElementById('radioPer').checked = true;
+  } else {
+    document.getElementById('radioGen').checked = true;
+  }
+  overlay.style.display = 'flex';
+  nameInput.focus();
+};
+
+window.closeCreateDiaryModal = function() {
+  var overlay = document.getElementById('createDiaryModalOverlay');
+  if (overlay) overlay.style.display = 'none';
+};
+
+window.confirmCreateDiary = function() {
+  var nameInput = document.getElementById('newDiaryNameInput');
+  var name = nameInput.value.trim();
+  if (!name) { showToast("⚠️️ অনুগ্রহ করে ডায়েরির নাম লিখুন!"); return; }
+  var radios = document.getElementsByName('diaryCategoryRadio');
+  var cat = "general";
+  for (var i = 0; i < radios.length; i++) {
+    if (radios[i].checked) { cat = radios[i].value; break; }
+  }
+  window.closeCreateDiaryModal();
+  document.getElementById('portalView').style.display = 'none';
+  document.getElementById('mainDiaryView').style.display = 'block';
+  document.getElementById('voiceFab').style.display = 'flex';
+  var loadBox = document.getElementById('loadingBox');
+  var list = document.getElementById('entriesList');
+  if (loadBox) loadBox.style.display = 'block';
+  if (list) list.style.display = 'none';
+  setStatus('📔 নতুন ডায়েরি তৈরি হচ্ছে...', 'rgba(234, 134, 0, 0.4)');
+  if (typeof google !== 'undefined' && google.script && google.script.run) {
+    google.script.run
+      .withSuccessHandler(function(res) {
+        if (res && res.success) {
+          currentDiary = name;
+          if (cat === "personal") {
+            isPersonalUnlocked = true;
+            updateLastActivity();
+          }
+          handleLoadedData(res);
+        }
+      })
+      .createNewDiary(name, cat);
+  }
+};
+
+window.switchDiary = function(dName) {
+  checkInactivityTimeout();
+  if (diaryCategories[dName] === "personal" && !isPersonalUnlocked) {
+    window.promptPersonalUnlock(dName);
+    return;
+  }
+  currentDiary = dName;
+  renderDiaryDropdown();
+  var cachedPages = getFromLocalStorage(currentDiary);
+  if (cachedPages && cachedPages.length > 0) {
+    handleLoadedData({ success: true, diaries: diaryList, categories: diaryCategories, pages: cachedPages });
+  }
+  var fallbackTimer = setTimeout(function() {
+    if (!cachedPages || cachedPages.length === 0) {
+      handleLoadedData({ success: true, diaries: diaryList, categories: diaryCategories, pages: allLoadedPages });
+    }
+  }, 3500);
+
+  var loadBox = document.getElementById('loadingBox');
+  if (loadBox && (!cachedPages || cachedPages.length === 0)) loadBox.style.display = 'block';
+  if (typeof google !== 'undefined' && google.script && google.script.run) {
+    google.script.run
+      .withSuccessHandler(function(res) {
+        clearTimeout(fallbackTimer);
+        handleLoadedData(res);
+      })
+      .withFailureHandler(function(err) {
+        clearTimeout(fallbackTimer);
+        handleLoadedData({ success: true, diaries: diaryList, categories: diaryCategories, pages: cachedPages || [] });
+      })
+      .loadDiaryData(currentDiary);
+  } else {
+    clearTimeout(fallbackTimer);
+    handleLoadedData({ success: true, diaries: diaryList, categories: diaryCategories, pages: cachedPages || [] });
+  }
+};
+
+function buildDateDropdown() {
+  var menu = document.getElementById('dateMenu');
+  if (!menu) return;
+  var dateCounts = {};
+  dateCounts[window.todayDateKey] = 0;
+  for (var i = 0; i < allLoadedPages.length; i++) {
+    var k = allLoadedPages[i].dateKey || window.todayDateKey;
+    dateCounts[k] = (dateCounts[k] || 0) + 1;
+  }
+  var allDates = Object.keys(dateCounts).sort().reverse();
+  var monthGroups = {};
+  for (var j = 0; j < allDates.length; j++) {
+    var dKey = allDates[j];
+    var mKey = dKey.substring(0, 7);
+    if (!monthGroups[mKey]) monthGroups[mKey] = [];
+    monthGroups[mKey].push({ dateKey: dKey, count: dateCounts[dKey] });
+  }
+  var html = '';
+  var todayCount = dateCounts[window.todayDateKey] || 0;
+  var todayActive = (currentActiveDateKey === window.todayDateKey) ? ' item-active' : '';
+  html += '<button type="button" class="dropdown-item' + todayActive + '" onclick="window.selectDateKey(\'' + window.todayDateKey + '\')">';
+  html += '<span>📅 আজকের ডায়েরি</span>';
+  html += '<span class="badge-count">' + toBn(todayCount) + ' পাতা</span>';
+  html += '</button>';
+
+  var monthKeys = Object.keys(monthGroups).sort().reverse();
+  for (var m = 0; m < monthKeys.length; m++) {
+    var mK = monthKeys[m];
+    html += '<div class="month-header">' + formatMonthKeyToBn(mK) + '</div>';
+    var dateItems = monthGroups[mK];
+    for (var d = 0; d < dateItems.length; d++) {
+      var itm = dateItems[d];
+      var isActive = (currentActiveDateKey === itm.dateKey) ? ' item-active' : '';
+      var label = (itm.dateKey === window.todayDateKey) ? 'আজ (' + formatDateKeyToSlashBn(itm.dateKey) + ')' : formatDateKeyToSlashBn(itm.dateKey);
+      html += '<button type="button" class="dropdown-item' + isActive + '" onclick="window.selectDateKey(\'' + itm.dateKey + '\')">';
+      html += '<span>' + label + '</span>';
+      html += '<span class="badge-count">' + toBn(itm.count) + ' পাতা</span>';
+      html += '</button>';
+    }
+  }
+  menu.innerHTML = html;
+}
+
+window.selectDateKey = function(dateKey) {
+  currentActiveDateKey = dateKey;
+  var bannerText = document.getElementById('dateBannerText');
+  var btnReturn = document.getElementById('btnReturnToday');
+  if (dateKey === window.todayDateKey) {
+    bannerText.innerText = '📅 আজকের ডায়েরি : ' + formatDateKeyToSlashBn(dateKey);
+    btnReturn.style.display = 'none';
+  } else {
+    bannerText.innerText = '📁 সংরক্ষিত ডায়েরি : ' + formatDateKeyToSlashBn(dateKey);
+    btnReturn.style.display = 'inline-block';
+  }
+  renderCurrentDatePages();
+  buildDateDropdown();
+};
+
+function handleLoadedData(res) {
+  document.getElementById('loadingBox').style.display = 'none';
+  document.getElementById('entriesList').style.display = 'block';
+  if (res && res.success) {
+    if (res.diaries) diaryList = res.diaries;
+    if (res.categories) diaryCategories = res.categories;
+    renderDiaryDropdown();
+    renderPortalItems();
+    if (res.sheetUrl) {
+      var sLink = document.getElementById('sheetLinkItem');
+      if (sLink) { sLink.href = res.sheetUrl; sLink.style.display = (isPersonalUnlocked && diaryCategories[currentDiary] === "personal") ? 'flex' : 'none'; }
+    }
+    if (res.folderUrl) {
+      var fLink = document.getElementById('folderLinkItem');
+      if (fLink) { fLink.href = res.folderUrl; fLink.style.display = (isPersonalUnlocked && diaryCategories[currentDiary] === "personal") ? 'flex' : 'none'; }
+    }
+    allLoadedPages = res.pages || [];
+    for (var i = 0; i < allLoadedPages.length; i++) {
+      if (!allLoadedPages[i].dateKey) {
+        allLoadedPages[i].dateKey = window.todayDateKey;
+      }
+    }
+    saveToLocalStorage(currentDiary, allLoadedPages);
+    window.selectDateKey(window.todayDateKey);
+    if (navigator.onLine) {
+      setStatus('☁️ ' + currentDiary + ' ড্রাইভের সাথে যুক্ত', 'rgba(30, 142, 62, 0.4)');
+      syncPendingQueue();
+    } else {
+      setStatus('📴 অফলাইন (ডিভাইসে সেভড)', 'rgba(234, 134, 0, 0.4)');
+    }
+  }
+}
+
+function renderCurrentDatePages() {
+  var list = document.getElementById('entriesList');
+  list.innerHTML = '';
+  var dayPages = allLoadedPages.filter(function(p) {
+    return (p.dateKey || window.todayDateKey) === currentActiveDateKey;
+  });
+  if (dayPages.length > 0) {
+    for (var j = 0; j < dayPages.length; j++) {
+      list.appendChild(createPageElement(dayPages[j]));
+    }
+  } else {
+    var newId = 'page_' + Date.now();
+    var ts = getBnTimestamp();
+    var initPage = {
+      id: newId,
+      dateKey: currentActiveDateKey,
+      timestamp: ts,
+      pageNum: '📄 পৃষ্ঠা: ১',
+      content: ''
+    };
+    allLoadedPages.push(initPage);
+    list.appendChild(createPageElement(initPage));
+    window.savePageData(initPage, false);
+  }
+  renumberPages();
+}
+
+function renumberPages() {
+  var pages = document.querySelectorAll('.diary-page');
+  for (var i = 0; i < pages.length; i++) {
+    var badge = pages[i].querySelector('.page-number-badge');
+    if (badge) badge.innerText = '📄 পৃষ্ঠা: ' + toBn(i + 1);
+  }
+}
+
+function checkAutoPagination(pageEl) {
+  var contentEl = pageEl.querySelector('.diary-content');
+  if (!contentEl) return;
+  var MAX_CONTENT_HEIGHT = 580;
+  if (contentEl.scrollHeight > MAX_CONTENT_HEIGHT) {
+    var currentPages = document.querySelectorAll('.diary-page');
+    var isLast = (currentPages[currentPages.length - 1] === pageEl);
+    if (isLast) {
+      window.handleAddNewPage();
+      showToast('📄 পৃষ্ঠা পূর্ণ হয়েছে, নতুন পৃষ্ঠা তৈরি হয়েছে!');
+    }
+  }
+}
+
+function createPageElement(data) {
+  var page = document.createElement('div');
+  page.className = 'diary-page';
+  page.id = data.id;
+  page.innerHTML =
+    '<div class="page-header">' +
+      '<div class="entry-timestamp">' + (data.timestamp || getBnTimestamp()) + '</div>' +
+      '<div class="page-number-badge">' + (data.pageNum || '📄 পৃষ্ঠা: ১') + '</div>' +
+    '</div>' +
+    '<div class="diary-content" contenteditable="true">' + (data.content || '') + '</div>' +
+    '<div class="photo-grid"></div>' +
+    '<div class="page-footer">' +
+      '<div class="page-footer-left">' +
+        '<button type="button" class="btn-save-page" onclick="window.manualSave(this)">💾 সেভ করুন</button>' +
+        '<button type="button" class="btn-ai-refine" onclick="window.refineWithAI(this)">✨ AI ঠিক করুন</button>' +
+        '<label class="btn-photo">' +
+          '📷 ছবি যোগ করুন' +
+          '<input type="file" accept="image/*" style="display:none;" onchange="window.handleDirectPhotoUpload(this)">' +
+        '</label>' +
+      '</div>' +
+      '<span class="page-save-indicator" id="ind_' + data.id + '">ড্রাইভে সেভড</span>' +
+    '</div>';
+
+  var editor = page.querySelector('.diary-content');
+  editor.addEventListener('input', function() {
+    data.content = editor.innerText;
+    var ind = document.getElementById('ind_' + data.id);
+    if (ind) ind.innerText = '✍️ লেখা হচ্ছে...';
+    checkAutoPagination(page);
+    clearTimeout(saveTimers[data.id]);
+    saveTimers[data.id] = setTimeout(function() {
+      window.savePageData(data, false);
+    }, 1500);
+  });
+  return page;
+}
+
+window.savePageData = function(pageData, isManual, callback) {
+  var ind = document.getElementById('ind_' + pageData.id);
+  if (ind) ind.innerText = '⏳ সেভ হচ্ছে...';
+  var found = false;
+  for (var i = 0; i < allLoadedPages.length; i++) {
+    if (allLoadedPages[i].id === pageData.id) {
+      allLoadedPages[i].content = pageData.content;
+      allLoadedPages[i].pageNum = pageData.pageNum;
+      allLoadedPages[i].timestamp = pageData.timestamp;
+      allLoadedPages[i].dateKey = currentActiveDateKey;
+      found = true;
+      break;
+    }
+  }
+  if (!found) {
+    allLoadedPages.push(pageData);
+  }
+  saveToLocalStorage(currentDiary, allLoadedPages);
+  buildDateDropdown();
+  var dayPages = allLoadedPages.filter(function(p) { return p.dateKey === currentActiveDateKey; });
+
+  if (!navigator.onLine) {
+    addToPendingQueue(currentDiary, pageData, dayPages);
+    if (ind) ind.innerText = '📴 অফলাইনে সংরক্ষিত';
+    setStatus('📴 অফলাইন (ডিভাইসে সংরক্ষিত)', 'rgba(234, 134, 0, 0.4)');
+    if (isManual) showToast('📴 অফলাইন: লেখা ডিভাইসে জমা রয়েছে, নেট পেলে সিঙ্ক হবে।');
+    if (callback) callback();
+    return;
+  }
+
+  if (typeof google !== 'undefined' && google.script && google.script.run) {
+    google.script.run
+      .withSuccessHandler(function() {
+        if (ind) ind.innerText = 'ড্রাইভে সেভড';
+        setStatus('☁️ সংরক্ষিত (' + currentDiary + ')', 'rgba(30, 142, 62, 0.4)');
+        if (isManual) showToast('✅ পৃষ্ঠার লেখা ও দৈনিক ডক ড্রাইভে সফলভাবে সেভ হয়েছে!');
+        if (callback) callback();
+      })
+      .withFailureHandler(function() {
+        addToPendingQueue(currentDiary, pageData, dayPages);
+        if (ind) ind.innerText = 'লোকালি সেভড';
+        setStatus('⚠️ অফলাইনে রাখা হয়েছে (সংযোগ ত্রুটি)', 'rgba(234, 134, 0, 0.4)');
+        if (callback) callback();
+      })
+      .saveOrUpdatePage(currentDiary, pageData, dayPages);
+  } else {
+    addToPendingQueue(currentDiary, pageData, dayPages);
+    if (ind) ind.innerText = 'অফলাইনে সংরক্ষিত';
+    if (callback) callback();
+  }
+};
+
+window.handleAddNewPage = function() {
+  var dayPages = allLoadedPages.filter(function(p) { return p.dateKey === currentActiveDateKey; });
+  var nextNum = dayPages.length + 1;
+  var newPage = {
+    id: 'page_' + Date.now(),
+    dateKey: currentActiveDateKey,
+    timestamp: getBnTimestamp(),
+    pageNum: '📄 পৃষ্ঠা: ' + toBn(nextNum),
+    content: ''
+  };
+  allLoadedPages.push(newPage);
+  renderCurrentDatePages();
+  window.savePageData(newPage, false);
+  buildDateDropdown();
+  setTimeout(function() {
+    var el = document.getElementById(newPage.id);
+    if (el) {
+      var editor = el.querySelector('.diary-content');
+      if (editor) {
+        editor.focus();
+        editor.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
+    }
+  }, 100);
+};
+
+window.handleDeleteLastPage = function() {
+  var dayPages = allLoadedPages.filter(function(p) { return p.dateKey === currentActiveDateKey; });
+  if (dayPages.length <= 1) {
+    showToast('⚠️ আজকের জন্য অন্তত একটি পৃষ্ঠা থাকতে হবে!');
+    return;
+  }
+  var last = dayPages[dayPages.length - 1];
+  allLoadedPages = allLoadedPages.filter(function(p) { return p.id !== last.id; });
+  saveToLocalStorage(currentDiary, allLoadedPages);
+  renderCurrentDatePages();
+  buildDateDropdown();
+  var remaining = allLoadedPages.filter(function(p) { return p.dateKey === currentActiveDateKey; });
+  if (typeof google !== 'undefined' && google.script && google.script.run) {
+    setStatus('🗑️ পৃষ্ঠা মুছে ফেলা হচ্ছে...', 'rgba(217, 48, 37, 0.4)');
+    google.script.run
+      .withSuccessHandler(function() {
+        setStatus('🗑️ পৃষ্ঠা মুছে ফেলা হয়েছে', 'rgba(30, 142, 62, 0.4)');
+      })
+      .deletePageFromSheet(currentDiary, last.id, currentActiveDateKey, remaining);
+  }
+};
+
+window.handleDirectPhotoUpload = function(inputEl) {
+  var file = inputEl.files && inputEl.files[0];
+  if (!file) return;
+  var page = inputEl.closest('.diary-page');
+  if (!page) return;
+  var grid = page.querySelector('.photo-grid');
+  if (!grid) return;
+  var reader = new FileReader();
+  reader.onload = function(e) {
+    var photoDiv = document.createElement('div');
+    photoDiv.className = 'photo-item';
+    photoDiv.innerHTML =
+      '<img src="' + e.target.result + '" alt="Photo">' +
+      '<button type="button" class="photo-del" onclick="this.parentNode.parentNode.removeChild(this.parentNode)">X</button>';
+    grid.appendChild(photoDiv);
+  };
+  reader.readAsDataURL(file);
+  inputEl.value = '';
+};
+
+window.manualSave = function(btn) {
+  var pageEl = btn.closest('.diary-page');
+  var pData = allLoadedPages.find(function(p) { return p.id === pageEl.id; });
+  if (pData) {
+    btn.innerText = '💾 সেভ হচ্ছে...';
+    btn.disabled = true;
+    window.savePageData(pData, true, function() {
+      btn.innerText = '✅ সেভ হয়েছে!';
+      setTimeout(function() {
+        btn.innerText = '💾 সেভ করুন';
+        btn.disabled = false;
+      }, 2000);
+    });
+  }
+};
+
+window.showApiKeyModal = function() {
+  var dMenu = document.getElementById('downloadMenu');
+  if (dMenu) dMenu.style.display = 'none';
+  document.getElementById('apiKeyModalOverlay').style.display = 'flex';
+  document.getElementById('geminiApiKeyInput').value = localStorage.getItem('gemini_diary_api_key') || '';
+};
+
+window.closeApiKeyModal = function() {
+  document.getElementById('apiKeyModalOverlay').style.display = 'none';
+};
+
+window.saveApiKey = function() {
+  var key = document.getElementById('geminiApiKeyInput').value.trim();
+  if (key) {
+    localStorage.setItem('gemini_diary_api_key', key);
+    showToast('🔑 Gemini API Key সংরক্ষিত হয়েছে!');
+  } else {
+    localStorage.removeItem('gemini_diary_api_key');
+    showToast('⚠️ API Key মুছে ফেলা হয়েছে!');
+  }
+  window.closeApiKeyModal();
+};
+
+window.refineWithAI = function(btn) {
+  var pageEl = btn.closest('.diary-page');
+  var contentEl = pageEl.querySelector('.diary-content');
+  var text = contentEl.innerText.trim();
+  var key = localStorage.getItem('gemini_diary_api_key');
+  if (!key) {
+    showToast('⚠️ মেনু থেকে আগে আপনার Gemini API Key দিন!');
+    window.showApiKeyModal();
+    return;
+  }
+  if (!text) {
+    showToast('⚠️ আগে পাতায় কিছু লিখুন!');
+    return;
+  }
+  btn.innerText = '✨ AI সাজাচ্ছে...';
+  btn.disabled = true;
+  setStatus('🤖 জেমিনি দাঁড়ি-কমা ও বানান ঠিক করছে...', 'rgba(234, 134, 0, 0.4)');
+  google.script.run
+    .withSuccessHandler(function(res) {
+      btn.innerText = '✨ AI ঠিক করুন';
+      btn.disabled = false;
+      if (res && res.success) {
+        contentEl.innerText = res.text;
+        var pData = allLoadedPages.find(function(p) { return p.id === pageEl.id; });
+        if (pData) {
+          pData.content = res.text;
+          window.savePageData(pData, false);
+        }
+        showToast('✨ দাঁড়ি-কমা ও ব্যাকরণ ঠিক করা হয়েছে!');
+        setStatus('✅ AI সম্পাদন সম্পন্ন', 'rgba(30, 142, 62, 0.4)');
+      } else {
+        showToast('❌ ' + (res.error || 'AI এরর'));
+        setStatus('❌ AI ত্রুটি', 'rgba(217, 48, 37, 0.4)');
+      }
+    })
+    .withFailureHandler(function() {
+      btn.innerText = '✨ AI ঠিক করুন';
+      btn.disabled = false;
+      showToast('❌ এআই সংযোগে সমস্যা হয়েছে');
+      setStatus('❌ সংযোগ ত্রুটি', 'rgba(217, 48, 37, 0.4)');
+    })
+    .processWithGemini(text, key);
+};
+
+function appendVoiceTextToPage(text, page) {
+  if (!text || !page) return;
+  var contentEl = page.querySelector('.diary-content');
+  if (!contentEl) return;
+  var existing = contentEl.innerText.trim();
+  var finalText = existing ? existing + '\n\n' + String(text).trim() : String(text).trim();
+  contentEl.innerText = finalText;
+  var pData = allLoadedPages.find(function(p) { return p.id === page.id; });
+  if (pData) {
+    pData.content = finalText;
+    window.savePageData(pData, false);
+  }
+}
+
+function processVoiceTranscript(rawText, page) {
+  var text = String(rawText || '').trim();
+  if (!text || !page) return;
+
+  var autoRefine = isAiAutoRefineEnabled();
+
+  if (!autoRefine) {
+    appendVoiceTextToPage(text, page);
+    setStatus('☁️ সংরক্ষিত (' + currentDiary + ')', 'rgba(30, 142, 62, 0.4)');
+    showToast('⚡ ভয়েসের লেখা সরাসরি ডায়েরিতে যোগ হয়েছে!');
+    return;
+  }
+
+  var apiKey = localStorage.getItem('gemini_diary_api_key') || '';
+  if (!apiKey) {
+    showToast('⚠️ AI অটো-রিফাইন অন থাকলেও API Key নেই, সরাসরি যোগ করা হলো।');
+    appendVoiceTextToPage(text, page);
+    return;
+  }
+
+  setStatus('🤖 AI দিয়ে লেখা সাজানো হচ্ছে...', 'rgba(106, 27, 154, .4)');
+  if (typeof google !== 'undefined' && google.script && google.script.run) {
+    google.script.run
+      .withSuccessHandler(function(res) {
+        setStatus('☁️ সংরক্ষিত', 'rgba(30, 142, 62, .4)');
+        if (res && res.success && res.text) {
+          appendVoiceTextToPage(res.text, page);
+          showToast('✨ ভয়েস যোগ হয়েছে এবং AI দিয়ে শুদ্ধ করা হয়েছে!');
+        } else {
+          appendVoiceTextToPage(text, page);
+        }
+      })
+      .withFailureHandler(function() {
+        setStatus('☁️ সংরক্ষিত', 'rgba(30, 142, 62, .4)');
+        appendVoiceTextToPage(text, page);
+      })
+      .processWithGemini(text, apiKey);
+  } else {
+    appendVoiceTextToPage(text, page);
+  }
+}
+
+window.addEventListener('message', function(event) {
+  var data = event && event.data;
+  if (!data || data.type !== 'DIARY_VOICE_TRANSCRIPT') return;
+  if (!voiceHelperWindow || event.source !== voiceHelperWindow) return;
+  if (!voiceSessionToken || data.token !== voiceSessionToken) return;
+
+  var text = String(data.text || '').trim();
+  var target = voiceTargetPage;
+  voiceSessionToken = null;
+  voiceHelperWindow = null;
+  isVoiceRecording = false;
+
+  if (!text) {
+    showToast('⚠️ কোনো ভয়েস লেখা পাওয়া যায়নি।');
+    return;
+  }
+  processVoiceTranscript(text, target);
+});
+
+window.toggleVoiceDiary = function() {
+  var pages = document.querySelectorAll('.diary-page');
+  var page = pages.length > 0 ? pages[pages.length - 1] : null;
+  if (!page) {
+    window.handleAddNewPage();
+    pages = document.querySelectorAll('.diary-page');
+    page = pages[pages.length - 1];
+  }
+  voiceTargetPage = page;
+  voiceSessionToken = 'v_' + Date.now();
+  isVoiceRecording = true;
+  var separator = VOICE_HELPER_URL.indexOf('?') === -1 ? '?' : '&';
+  var url = VOICE_HELPER_URL + separator + 'token=' + encodeURIComponent(voiceSessionToken) + '&parentOrigin=' + encodeURIComponent(window.location.origin);
+  voiceHelperWindow = window.open(url, 'diaryVoiceHelper', 'popup=yes,width=520,height=720,resizable=yes,scrollbars=yes');
+  if (!voiceHelperWindow) {
+    isVoiceRecording = false;
+    voiceSessionToken = null;
+    showToast('⚠️ পপ-আপ ব্লক করা আছে! Browser-এ Popup Allow করুন।');
+    return;
+  }
+  try { voiceHelperWindow.focus(); } catch (e) {}
+  showToast('🎙️ নতুন Voice Helper উইন্ডোতে কথা রেকর্ড করুন।');
+};
+
+window.handlePrintPdf = function(isFullDiary) {
+  var menu = document.getElementById('downloadMenu');
+  if (menu) menu.style.display = 'none';
+  if (!isFullDiary) {
+    window.print();
+    return;
+  }
+  var list = document.getElementById('entriesList');
+  if (!list) return;
+  var dates = [];
+  for (var i = 0; i < allLoadedPages.length; i++) {
+    var d = allLoadedPages[i].dateKey || window.todayDateKey;
+    if (dates.indexOf(d) === -1) dates.push(d);
+  }
+  dates.sort();
+  list.innerHTML = '';
+  for (var j = 0; j < dates.length; j++) {
+    var curDate = dates[j];
+    var dayPages = allLoadedPages.filter(function(p) { return (p.dateKey || window.todayDateKey) === curDate; });
+    for (var k = 0; k < dayPages.length; k++) {
+      list.appendChild(createPageElement(dayPages[k]));
+    }
+  }
+  window.print();
+  setTimeout(function() {
+    renderCurrentDatePages();
+  }, 1000);
+};
+
+window.exportWord = function(isFullDiary) {
+  var menu = document.getElementById('downloadMenu');
+  if (menu) menu.style.display = 'none';
+  var wordHtml = '<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w="urn:schemas-microsoft-com:office:word" xmlns="http://www.w3.org/TR/REC-html40">';
+  wordHtml += '<head><meta charset="utf-8"><title>' + currentDiary + '</title>';
+  wordHtml += '<style>';
+  wordHtml += '@page Section1 { size: 210mm 297mm; margin: 0.5in; }';
+  wordHtml += 'div.Section1 { page: Section1; }';
+  wordHtml += 'body { font-family: Arial, sans-serif; margin: 0; padding: 0.5in; }';
+  wordHtml += '</style></head>';
+  wordHtml += '<body><div class="Section1">';
+  var downloadFileName = "";
+  if (!isFullDiary) {
+    var formattedSlash = formatDateKeyToSlashBn(currentActiveDateKey);
+    downloadFileName = currentDiary + '_' + currentActiveDateKey + '.doc';
+    wordHtml += '<h1 style="color: #1a73e8; text-align: center; border-bottom: 2px solid #8c7355; padding-bottom: 10px; margin-top: 0;">📔 ' + currentDiary + ' : ' + formattedSlash + '</h1>';
+    var pages = document.querySelectorAll('.diary-page');
+    for (var i = 0; i < pages.length; i++) {
+      var page = pages[i];
+      var timestamp = page.querySelector('.entry-timestamp') ? page.querySelector('.entry-timestamp').innerText : '';
+      var pageBadge = page.querySelector('.page-number-badge') ? page.querySelector('.page-number-badge').innerText : '';
+      var content = page.querySelector('.diary-content') ? page.querySelector('.diary-content').innerText : '';
+      var imgs = page.querySelectorAll('.photo-item img');
+      wordHtml += '<div style="margin-top: 15px; border: 2px solid #8c7355; border-radius: 8px; padding: 18px; page-break-after: always; min-height: 800px;">';
+      wordHtml += '<div style="display: flex; justify-content: space-between; border-bottom: 1px solid #ccc; padding-bottom: 8px; margin-bottom: 12px;">';
+      wordHtml += '  <strong style="color: #1a73e8; font-size: 14px;">' + timestamp + '</strong>';
+      wordHtml += '  <span style="color: #666; font-size: 13px; font-weight: bold; float: right;">[' + pageBadge + ']</span>';
+      wordHtml += '</div>';
+      wordHtml += '<p style="white-space: pre-wrap; font-size: 15px; color: #333; line-height: 1.6;">' + content + '</p>';
+      if (imgs.length > 0) {
+        wordHtml += '<div style="margin-top: 14px;">';
+        for (var j = 0; j < imgs.length; j++) {
+          wordHtml += '  <img src="' + imgs[j].src + '" style="max-width: 360px; display: block; margin: 10px 0; border-radius: 6px;" />';
+        }
+        wordHtml += '</div>';
+      }
+      wordHtml += '</div>';
+    }
+  } else {
+    downloadFileName = currentDiary + '_সম্পূর্ণ_ডায়েরি.doc';
+    wordHtml += '<h1 style="color: #1a73e8; text-align: center; border-bottom: 2px solid #8c7355; padding-bottom: 12px; margin-top: 0;">📔 ' + currentDiary + ' (সম্পূর্ণ ডায়েরি)</h1>';
+    var dates = [];
+    for (var i = 0; i < allLoadedPages.length; i++) {
+      var d = allLoadedPages[i].dateKey || window.todayDateKey;
+      if (dates.indexOf(d) === -1) dates.push(d);
+    }
+    dates.sort();
+    for (var dIdx = 0; dIdx < dates.length; dIdx++) {
+      var curD = dates[dIdx];
+      var dayPages = allLoadedPages.filter(function(p) { return (p.dateKey || window.todayDateKey) === curD; });
+      for (var pIdx = 0; pIdx < dayPages.length; pIdx++) {
+        var pg = dayPages[pIdx];
+        wordHtml += '<div style="margin-top: 15px; border: 2px solid #8c7355; border-radius: 8px; padding: 18px; page-break-after: always; min-height: 800px;">';
+        wordHtml += '<div style="display: flex; justify-content: space-between; border-bottom: 1px solid #ccc; padding-bottom: 8px; margin-bottom: 12px;">';
+        wordHtml += '  <strong style="color: #1a73e8; font-size: 14px;">' + (pg.timestamp || '') + '</strong>';
+        wordHtml += '  <span style="color: #666; font-size: 13px; font-weight: bold; float: right;">[' + (pg.pageNum || '') + ']</span>';
+        wordHtml += '</div>';
+        wordHtml += '<p style="white-space: pre-wrap; font-size: 15px; color: #333; line-height: 1.6;">' + (pg.content || '') + '</p>';
+        wordHtml += '</div>';
+      }
+    }
+  }
+  wordHtml += '</div></body></html>';
+  var blob = new Blob(['\ufeff' + wordHtml], { type: 'application/msword' });
+  var a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = downloadFileName;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+};
+
+window.onload = function() {
+  updateAiSwitchUI(isAiAutoRefineEnabled());
+
+  try {
+    var unl = sessionStorage.getItem("diary_personal_unlocked") === "true";
+    var lastTime = parseInt(sessionStorage.getItem("diary_last_active_time") || "0", 10);
+    if (unl && (Date.now() - lastTime < AUTO_LOCK_TIMEOUT_MS)) {
+      isPersonalUnlocked = true;
+      lastActivityTime = lastTime;
+    } else {
+      sessionStorage.removeItem("diary_personal_unlocked");
+      sessionStorage.removeItem("diary_last_active_time");
+    }
+  } catch(e) {}
+
+  if (typeof google !== 'undefined' && google.script && google.script.run) {
+    google.script.run
+      .withSuccessHandler(function(res) {
+        if (res) {
+          diaryList = res.list || [];
+          diaryCategories = res.categories || {};
+          renderPortalItems();
+        }
+      })
+      .listAllDiaries();
+  }
+};
+</script>
+</body>
+</html>
+
+
+
+
+
+
+
+
