@@ -33,9 +33,10 @@ textarea:focus{border-color:#1a73e8}
 button.action{border:0;border-radius:10px;padding:12px 8px;font-size:14px;font-weight:700;cursor:pointer}
 #clearButton{background:#f1f3f4;color:#202124}#submitButton{background:#188038;color:#fff}
 button:disabled{opacity:.55;cursor:not-allowed}
-.file-row{display:flex;gap:8px;margin-top:9px}
-#fileButton{flex:1;background:#fff;border:1px solid #dadce0;color:#3c4043}
+.file-row{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:9px}
+#fileButton,#browserTestButton{background:#fff;border:1px solid #dadce0;color:#3c4043}
 #audioFile{display:none}
+@media(max-width:420px){.file-row{grid-template-columns:1fr}}
 .info{margin-top:14px;padding:11px 13px;border-radius:10px;background:#eef3fc;color:#3c4043;font-size:12px;line-height:1.65}
 .warning{background:#fff4e5;color:#8a4b08}
 @media(max-width:420px){body{padding:8px}.container{padding:14px;border-radius:15px}h1{font-size:21px}#micButton{width:96px;height:96px;font-size:40px}textarea{min-height:180px}}
@@ -81,6 +82,7 @@ button:disabled{opacity:.55;cursor:not-allowed}
 
   <div class="file-row">
     <button class="action" id="fileButton" type="button">🎧 অডিও ফাইল থেকে লেখা</button>
+    <button class="action" id="browserTestButton" type="button">🌐 Browser Speech পরীক্ষা</button>
     <input id="audioFile" type="file" accept="audio/*,.webm,.wav,.mp3,.m4a,.ogg">
   </div>
 
@@ -94,10 +96,10 @@ button:disabled{opacity:.55;cursor:not-allowed}
 'use strict';
 
 var $=function(id){return document.getElementById(id);};
-var micButton=$('micButton'),statusEl=$('status'),textOutput=$('textOutput');
-var clearButton=$('clearButton'),submitButton=$('submitButton');
-var apiToggle=$('apiToggle'),apiMenu=$('apiMenu'),apiKeyInput=$('apiKey'),saveKeyButton=$('saveKeyButton'),keyStatus=$('keyStatus');
-var browserMode=$('browserMode'),geminiMode=$('geminiMode'),fileButton=$('fileButton'),audioFile=$('audioFile');
+var micButton=('micButton'),statusEl=('status'),textOutput=$('textOutput');
+var clearButton=('clearButton'),submitButton=('submitButton');
+var apiToggle=('apiToggle'),apiMenu=('apiMenu'),apiKeyInput=('apiKey'),saveKeyButton=('saveKeyButton'),keyStatus=$('keyStatus');
+var browserMode=('browserMode'),geminiMode=('geminiMode'),fileButton=('fileButton'),audioFile=('audioFile'),browserTestButton=$('browserTestButton');
 
 var token='',parentOrigin='';
 try{
@@ -112,14 +114,11 @@ var recognition=null,browserSupported=!!(window.SpeechRecognition||window.webkit
 var browserFinalParts=[],browserInterim='';
 
 var GEMINI_MODELS=[
- 'gemini-3.5-transcribe',
- 'gemini-3.8-flash',
- 'gemini-3.7-flash',
- 'gemini-3.6-flash',
- 'gemini-3.5-flash',
- 'gemini-3.5-flash-lite',
- 'gemini-2.5-flash',
- 'gemini-2.5-flash-lite'
+  'gemini-3.5-transcribe',
+  'gemini-3.8-flash',
+  'gemini-3.5-flash-lite',
+  'gemini-2.5-flash',
+  'gemini-2.5-flash-lite'
 ];
 
 function setStatus(m){statusEl.textContent=String(m||'');}
@@ -168,43 +167,88 @@ function extractText(json){
  return out.replace(/^\s*```(?:text|plaintext|markdown)?\s*/i,'').replace(/\s*```\s*$/i,'').trim();
 }
 async function geminiGenerate(model,key,mime,b64,prompt,transcribeOnly){
- var endpoint='https://generativelanguage.googleapis.com/v1beta/models/'+model+':generateContent';
- var body={
-  contents:[{role:'user',parts:[{text:prompt},{inlineData:{mimeType:mime,data:b64}}]}],
-  generationConfig:{temperature:0.1}
- };
- if(transcribeOnly) body.generationConfig.audioTranscriptionConfig={languageCodes:['bn-BD'],mode:'SMART'};
- var res=await fetch(endpoint,{method:'POST',headers:{'Content-Type':'application/json','x-goog-api-key':key},body:JSON.stringify(body)});
- var raw=await res.text(),json=null;try{json=JSON.parse(raw)}catch(e){}
- if(!res.ok){
-  var msg=json&&json.error&&json.error.message?String(json.error.message):('HTTP '+res.status);
-  var err=new Error(msg);err.status=res.status;throw err;
- }
- return extractText(json);
+  var endpoint='https://generativelanguage.googleapis.com/v1beta/models/'+model+':generateContent';
+
+  var body={
+    contents:[{
+      role:'user',
+      parts:[
+        {text:prompt},
+        {inlineData:{mimeType:mime,data:b64}}
+      ]
+    }],
+    generationConfig:{temperature:0.05}
+  };
+
+  var res=await fetch(endpoint,{
+    method:'POST',
+    headers:{
+      'Content-Type':'application/json',
+      'x-goog-api-key':key
+    },
+    body:JSON.stringify(body)
+  });
+
+  var raw=await res.text(),json=null;
+  try{json=JSON.parse(raw)}catch(e){}
+
+  if(!res.ok){
+    var msg=json&&json.error&&json.error.message
+      ?String(json.error.message)
+      :'HTTP '+res.status;
+    var err=new Error(msg);
+    err.status=res.status;
+    throw err;
+  }
+
+  var out=extractText(json);
+  if(!out) throw new Error('Gemini কোনো transcript ফেরত দেয়নি।');
+  return out;
 }
 async function transcribeGemini(blob,mime){
- var key=getKey(); if(!key)throw new Error('Gemini API Key নেই');
- if(!blob||!blob.size)throw new Error('অডিও খালি');
- if(blob.size>18*1024*1024)throw new Error('অডিও 18 MB-এর বেশি। ছোট করে রেকর্ড করুন।');
- var b64=await blobBase64(blob),clean=(mime||blob.type||'audio/webm').split(';')[0];
- var prompt='এই অডিওতে বাংলা ভাষায় কথা বলা হয়েছে। কথাগুলো পরিষ্কার বাংলা transcript হিসেবে লিখুন। মূল অর্থ পরিবর্তন করবেন না, অতিরিক্ত কথা যোগ করবেন না, শুধু transcript দিন।';
- var last=null;
- for(var i=0;i<GEMINI_MODELS.length;i++){
-  var model=GEMINI_MODELS[i];
-  try{
-   setStatus('🤖 Gemini '+model+' দিয়ে voice-to-text চেষ্টা হচ্ছে...');
-   var special=model==='gemini-3.5-transcribe';
-   var t=await geminiGenerate(model,key,clean,b64,prompt,special);
-   if(t)return {text:t,model:model};
-  }catch(e){
-   last=e;
-   var msg=String(e&&e.message||'');
-   if(e.status===401||e.status===403)break;
-   if(e.status===429||e.status===503||/quota|rate.?limit|resource.?exhausted|overload/i.test(msg))continue;
-   if(e.status===404)continue;
+  var key=getKey();
+  if(!key)throw new Error('Gemini API Key নেই');
+  if(!blob||!blob.size)throw new Error('অডিও খালি');
+  if(blob.size>18*1024*1024)throw new Error('অডিও 18 MB-এর বেশি। ছোট করে রেকর্ড করুন।');
+
+  var b64=await blobBase64(blob);
+  var clean=(mime||blob.type||'audio/webm').split(';')[0];
+
+  var prompt =
+    'Transcribe this audio into clear Bengali text. ' +
+    'The speaker is expected to speak Bengali, but detect the spoken language automatically if necessary. ' +
+    'Preserve the speaker\'s meaning. Do not answer the speaker. Do not add facts. ' +
+    'Use natural Bengali punctuation and paragraph breaks. Return only the transcript.';
+
+  var last=null;
+
+  for(var i=0;i<GEMINI_MODELS.length;i++){
+    var model=GEMINI_MODELS[i];
+
+    try{
+      setStatus('🤖 Gemini '+model+' দিয়ে voice-to-text চেষ্টা হচ্ছে...');
+      var t=await geminiGenerate(model,key,clean,b64,prompt,model==='gemini-3.5-transcribe');
+      if(t)return {text:t,model:model};
+    }catch(e){
+      last=e;
+      var msg=String(e&&e.message||'');
+
+      // Invalid/retired model: immediately try the next documented model.
+      if(e.status===404)continue;
+
+      // Bad key / permission problem: retrying other models will not fix it.
+      if(e.status===400 && /api.?key|permission|authentication|invalid/i.test(msg))break;
+      if(e.status===401||e.status===403)break;
+
+      // Quota/rate limit: try the next model, then Browser Speech remains the fallback.
+      if(e.status===429||e.status===503||/quota|rate.?limit|resource.?exhausted|overload|capacity/i.test(msg))continue;
+
+      // Other transient/API errors: try next model as well.
+      continue;
+    }
   }
- }
- throw last||new Error('Gemini কোনো model থেকে transcript দিতে পারেনি।');
+
+  throw last||new Error('Gemini কোনো model থেকে transcript দিতে পারেনি।');
 }
 
 /* Browser Speech Recognition fallback */
@@ -330,6 +374,32 @@ function stopRecording(){
  if(browserText()){textOutput.value=browserText();setStatus('✅ Browser Speech transcript প্রস্তুত।');}
 }
 
+function testBrowserSpeech(){
+  if(!recognition||!browserSupported){
+    setStatus('❌ এই ব্রাউজারে Web Speech Recognition নেই। Chrome Android-এ চেষ্টা করুন।');
+    return;
+  }
+  if(isRecording||isProcessing){
+    setStatus('⚠️ আগে বর্তমান recording/process শেষ করুন।');
+    return;
+  }
+
+  browserFinalParts=[];
+  browserInterim='';
+  textOutput.value='';
+  updateSend();
+
+  try{
+    recognition.start();
+    isRecording=true;
+    micButton.classList.add('recording');
+    micButton.textContent='⏹️';
+    setStatus('🌐 Browser Speech পরীক্ষা চলছে... কথা বলুন, তারপর ⏹️ চাপুন।');
+  }catch(e){
+    setStatus('❌ Browser Speech চালু করা যায়নি।');
+  }
+}
+
 async function transcribeFile(file){
  if(!file)return;
  var key=getKey();
@@ -346,11 +416,20 @@ async function transcribeFile(file){
 function submitDiary(){
  var text=String(textOutput.value||'').trim();
  if(!text)return setStatus('⚠️ ডায়েরিতে পাঠানোর মতো লেখা নেই।');
- if(!parentOrigin)return setStatus('❌ parentOrigin নেই। মূল ডায়েরি থেকে Helper খুলুন।');
+ if(!parentOrigin)return setStatus('❌ parentOrigin নেই। মূল ডায়েরির Voice Helper থেকেই খুলুন।');
  if(!token)return setStatus('❌ Voice session token নেই।');
- if(!window.opener||window.opener.closed)return setStatus('❌ মূল ডায়েরির উইন্ডো পাওয়া যাচ্ছে না।');
+ var target=null;
+ if(window.parent && window.parent !== window){
+   target=window.parent;
+ }else if(window.opener && !window.opener.closed){
+   target=window.opener;
+ }
+ if(!target){
+   setStatus('❌ Voice Helper-টি মূল ডায়েরির ভেতর থেকে খুলুন। সরাসরি GitHub লিংক খুললে ডায়েরিতে পাঠানো যাবে না।');
+   return;
+ }
  try{
-  window.opener.postMessage({type:'DIARY_VOICE_TRANSCRIPT',token:token,text:text},parentOrigin);
+  target.postMessage({type:'DIARY_VOICE_TRANSCRIPT',token:token,text:text},parentOrigin);
   setStatus('✅ লেখা মূল ডায়েরিতে পাঠানো হয়েছে।');submitButton.disabled=true;
   setTimeout(function(){try{window.close();}catch(e){}},700);
  }catch(e){setStatus('❌ ডায়েরিতে পাঠানো যায়নি।');}
@@ -365,8 +444,16 @@ saveKeyButton.addEventListener('click',saveKey);
 apiToggle.addEventListener('click',function(e){e.preventDefault();e.stopPropagation();apiMenu.classList.contains('open')?closeApi():openApi();});
 apiKeyInput.addEventListener('keydown',function(e){if(e.key==='Enter'){e.preventDefault();saveKey();}});
 fileButton.addEventListener('click',function(){audioFile.click();});
+  browserTestButton.addEventListener('click',testBrowserSpeech);
 audioFile.addEventListener('change',function(){var f=this.files&&this.files[0];if(f)transcribeFile(f);this.value='';});
 document.addEventListener('click',function(e){if(!e.target.closest('.api-dropdown'))closeApi();});
+
+window.addEventListener('error',function(e){
+  console.error('Voice Diary error:',e.error||e.message);
+});
+window.addEventListener('unhandledrejection',function(e){
+  console.error('Voice Diary promise error:',e.reason);
+});
 
 setupRecognition();updateKeyUI();updateSend();
 setStatus(browserSupported?'🎙️ কথা রেকর্ড করতে মাইক্রোফোন চাপুন। Browser Speech প্রস্তুত।':'🎙️ Microphone চাপুন। Browser Speech নেই—Gemini Key থাকলে Gemini audio ব্যবহার হবে।');
