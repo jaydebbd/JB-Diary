@@ -87,7 +87,6 @@ button:disabled{opacity:.55;cursor:not-allowed}
   </div>
 
   <div class="info">
-    <b>🎤 Microphone অনুমতি:</b> প্রথমবার চাইলে <b>Allow</b> দিন। যদি permission আগে Block করা থাকে, Chrome address bar-এর 🔒 → Microphone → Allow করে পেজটি Reload করুন।<br><br>
     <b>একাধিক Voice-to-Text পথ:</b> প্রথমে Browser Speech Recognition দিয়ে লেখা নেওয়া হবে। একই সঙ্গে অডিও রেকর্ড হবে। Gemini API Key থাকলে Gemini 3.5 Transcribe/অন্যান্য Gemini audio model দিয়ে অডিওও পাঠানো হবে। Gemini quota শেষ হলেও Browser transcript রাখা হবে। Browser speech না চললে Gemini পথ চেষ্টা হবে।
   </div>
 </div>
@@ -97,10 +96,10 @@ button:disabled{opacity:.55;cursor:not-allowed}
 'use strict';
 
 var $=function(id){return document.getElementById(id);};
-var micButton=$('micButton'),statusEl=$('status'),textOutput=$('textOutput');
-var clearButton=$('clearButton'),submitButton=$('submitButton');
-var apiToggle=$('apiToggle'),apiMenu=$('apiMenu'),apiKeyInput=$('apiKey'),saveKeyButton=$('saveKeyButton'),keyStatus=$('keyStatus');
-var browserMode=$('browserMode'),geminiMode=$('geminiMode'),fileButton=$('fileButton'),audioFile=$('audioFile'),browserTestButton=$('browserTestButton');
+var micButton=('micButton'),statusEl=('status'),textOutput=$('textOutput');
+var clearButton=('clearButton'),submitButton=('submitButton');
+var apiToggle=('apiToggle'),apiMenu=('apiMenu'),apiKeyInput=('apiKey'),saveKeyButton=('saveKeyButton'),keyStatus=$('keyStatus');
+var browserMode=('browserMode'),geminiMode=('geminiMode'),fileButton=('fileButton'),audioFile=('audioFile'),browserTestButton=$('browserTestButton');
 
 var token='',parentOrigin='';
 try{
@@ -338,16 +337,9 @@ function startRecording(){
   catch(e){stopTracks();resetMic();setStatus('❌ Recording শুরু করা যায়নি।');}
  })
  .catch(function(e){
-  if(e&&e.name==='NotAllowedError'){
-    var inFrame = (window.parent && window.parent !== window);
-    if(inFrame){
-      setStatus('⚠️ Microphone Permission বন্ধ/ব্লক আছে। Chrome-এর address bar-এর 🔒 → Microphone → Allow করুন, তারপর আবার 🎙️ চাপুন।');
-    }else{
-      setStatus('⚠️ Microphone Permission Allow করুন। Address bar-এর 🔒 → Microphone → Allow করুন।');
-    }
-  }else if(browserSupported){
-    startBrowserSpeech();isRecording=true;micButton.classList.add('recording');micButton.textContent='⏹️';setStatus('🔴 Audio recorder পাওয়া যায়নি; Browser Speech দিয়ে চেষ্টা চলছে।');
-  }else setStatus('❌ Microphone চালু করা যায়নি।');
+  if(e&&e.name==='NotAllowedError')setStatus('⚠️ Microphone Permission Allow করুন।');
+  else if(browserSupported){startBrowserSpeech();isRecording=true;micButton.classList.add('recording');micButton.textContent='⏹️';setStatus('🔴 Audio recorder পাওয়া যায়নি; Browser Speech দিয়ে চেষ্টা চলছে।');}
+  else setStatus('❌ Microphone চালু করা যায়নি।');
  });
 }
 async function processRecordedAudio(){
@@ -469,3 +461,5 @@ setStatus(browserSupported?'🎙️ কথা রেকর্ড করতে �
 </script>
 </body>
 </html>
+
+
